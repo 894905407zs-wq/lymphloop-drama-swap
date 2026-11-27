@@ -420,7 +420,8 @@ class Splice(unittest.TestCase):
 # ---------------------------------------------------------------- 10 tool lookup
 class ToolLookup(unittest.TestCase):
     def fake(self, d, name):
-        p = Path(d)/name; p.parent.mkdir(parents=True, exist_ok=True); p.write_text('#!/bin/sh\n'); p.chmod(0o755); return str(p.resolve())
+        import oscompat
+        p = Path(d)/oscompat.exe(name); p.parent.mkdir(parents=True, exist_ok=True); p.write_text('#!/bin/sh\n'); p.chmod(0o755); return str(p.resolve())
 
     def test_order_env_skill_bin_path_codex(self):
         with tempfile.TemporaryDirectory() as td:

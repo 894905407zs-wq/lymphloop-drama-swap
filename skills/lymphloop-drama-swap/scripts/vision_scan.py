@@ -113,17 +113,48 @@ def reader():
     return _ocr
 
 
+def tighten(gray, box, lo=0.15, pad=0.08, loose_h=0.62, loose_w=0.8):
+    """Shrink a box that is clearly larger than the strokes inside it; a box that already fits comes back unchanged.
+    The detector draws a fat region around large soft text: on the 4x enlarged strips of a faint vertical watermark
+    its boxes were 1.95x as tall as Vision's (up to 2.87x), which would triple the stamp that covers the mark; with
+    this step they are 1.00x (0.88-1.08), and the 72 ordinary lines of the calibration frames do not move
+    (2026-11-26). Rows and columns are kept from the first to the last one that holds stroke edges."""
+    import numpy as np
+    x, y, w, h = box
+    if w < 12 or h < 8: return box
+    crop = gray[y:y + h, x:x + w].astype(np.float32)
+    gx = np.abs(np.diff(crop, axis=1)); gy = np.abs(np.diff(crop, axis=0))
+
+    def span(p):
+        if len(p) < 6: return 0, len(p)
+        p = np.convolve(p, np.ones(3) / 3, mode='same')
+        base, top = np.percentile(p, 10), np.percentile(p, 95)
+        if top - base < 1.0: return 0, len(p)
+        idx = np.where(p > base + lo * (top - base))[0]
+        return (int(idx[0]), int(idx[-1]) + 1) if len(idx) else (0, len(p))
+
+    ra, rb = span(gx.mean(axis=1))
+    m = int(round(pad * (rb - ra))) + 1
+    if rb - ra < 0.15 * h or (rb - ra) + 2 * m >= loose_h * h: ra, rb, m = 0, h, 0          # nothing found, or the box fits
+    y0, y1 = max(0, ra - m), min(h, rb + m)
+    ca, cb = span(np.maximum(gx[y0:y1].mean(axis=0), gy[y0:max(y0 + 1, y1 - 1)].mean(axis=0)[:gx.shape[1]]))
+    mx = int(round(pad * (y1 - y0))) + 1
+    if cb - ca < 0.3 * w or (cb - ca) + 2 * mx >= loose_w * w: ca, cb, mx = 0, w, 0
+    x0, x1 = max(0, ca - mx), min(w, cb + mx)
+    return [x + x0, y + y0, x1 - x0, y1 - y0]
+
+
 def read_lines(img):
     """[(text, confidence, [x, y, w, h])] for one BGR frame: whole text lines, boxes upright and inside the frame."""
-    import numpy as np
+    import cv2, numpy as np
     r = reader()(img)
     if r is None or r.boxes is None or r.txts is None: return []
-    H, W = img.shape[:2]; out = []
+    H, W = img.shape[:2]; out = []; gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
     for quad, text, score in zip(r.boxes, r.txts, r.scores if r.scores is not None else [0.0] * len(r.txts)):
         q = np.asarray(quad, dtype=float).reshape(-1, 2)
         x0, y0 = max(0, int(np.floor(q[:, 0].min()))), max(0, int(np.floor(q[:, 1].min())))
         x1, y1 = min(W, int(np.ceil(q[:, 0].max()))), min(H, int(np.ceil(q[:, 1].max())))
-        if x1 > x0 and y1 > y0 and str(text).strip(): out.append((str(text), float(score), [x0, y0, x1 - x0, y1 - y0]))
+        if x1 > x0 and y1 > y0 and str(text).strip(): out.append((str(text), float(score), tighten(gray, [x0, y0, x1 - x0, y1 - y0])))
     return out
 
 

@@ -128,6 +128,7 @@ class Assess(unittest.TestCase):
 
 
 class RestartTunnel(_Root):
+    @unittest.skipUnless(hasattr(signal, 'SIGUSR1'), 'no user signals on Windows: the daemon is stopped and started again')
     def test_running_daemon_gets_sigusr1_and_reports_the_new_url(self):
         hostd._write_state(pid=os.getpid(), url='https://old.trycloudflare.com', healthy_at=time.time(), restartable=True)
         prev = signal.signal(signal.SIGUSR1, lambda *_: hostd._write_state(url='https://new.trycloudflare.com', healthy_at=time.time()))
@@ -137,7 +138,12 @@ class RestartTunnel(_Root):
 
     def test_daemon_without_restart_support_is_stopped_and_started_again(self):
         # detached like the real daemon (not our child, so it leaves no zombie that still answers kill 0)
-        pid = int(subprocess.run(['sh', '-c', 'sleep 60 >/dev/null 2>&1 & echo $!'], capture_output=True, text=True).stdout)
+        if os.name == 'nt':
+            child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL, **hostd.oscompat.detached())
+            pid = child.pid
+        else:
+            pid = int(subprocess.run(['sh', '-c', 'sleep 60 >/dev/null 2>&1 & echo $!'], capture_output=True, text=True).stdout)
         try:
             hostd._write_state(pid=pid, url='https://old.trycloudflare.com', healthy_at=time.time())
             def fake_ensure(): hostd._write_state(pid=os.getpid(), url='https://new.trycloudflare.com', healthy_at=time.time(), restartable=True); return 'x'
@@ -146,7 +152,7 @@ class RestartTunnel(_Root):
             self.assertFalse(hostd._alive(pid))
             self.assertEqual(s['url'], 'https://new.trycloudflare.com')
         finally:
-            if hostd._alive(pid): os.kill(pid, signal.SIGKILL)
+            if hostd._alive(pid): hostd._terminate(pid) if os.name == 'nt' else os.kill(pid, signal.SIGKILL)
 
 
 class PublicModes(_Root):

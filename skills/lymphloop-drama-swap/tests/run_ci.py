@@ -23,7 +23,11 @@ def known():
 def main():
     sys.path.insert(0, str(TESTS))
     suite = unittest.defaultTestLoader.discover(str(TESTS))
-    result = unittest.TextTestRunner(verbosity=1, buffer=True).run(suite)
+    # every test is named as it starts, and a run that stops moving prints where it is: a hang is visible in the log
+    import faulthandler
+    faulthandler.dump_traceback_later(600, repeat=True, file=sys.stderr)
+    result = unittest.TextTestRunner(stream=sys.stdout, verbosity=2, buffer=True).run(suite)
+    faulthandler.cancel_dump_traceback_later()
     failed = {}
     for test, trace in result.failures + result.errors:
         failed.setdefault(test.id().split(' ')[0], trace.strip().splitlines()[-1][:300])

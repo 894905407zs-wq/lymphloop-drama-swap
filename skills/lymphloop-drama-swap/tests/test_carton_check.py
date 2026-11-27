@@ -8,7 +8,9 @@ sys.path.insert(0, str(HERE.parent/'scripts'))
 import carton_check as cc  # noqa: E402
 import media_pipeline as media  # noqa: E402
 
-FONT = '/System/Library/Fonts/Supplemental/Arial Bold.ttf'
+import oscompat  # noqa: E402
+
+FONT = oscompat.find_font(*oscompat.SANS_BOLD)      # Arial Bold on macOS and Windows
 
 
 def carton_movie(path, box_w, box_h, word=True, seconds=2):

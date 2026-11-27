@@ -12,6 +12,13 @@ import flash_screen as fs  # noqa: E402
 import swap  # noqa: E402
 import watermark_brand as wb  # noqa: E402
 
+
+def fake_scanner(folder, record):
+    """A stand-in for the OCR program: writes `record` to its second argument. Returned as a command list."""
+    p = Path(folder)/'fake_scan.py'
+    p.write_text('import sys\nopen(sys.argv[2], "w", encoding="utf-8").write(' + repr(json.dumps(record)) + ')\n', encoding='utf-8')
+    return [sys.executable, str(p)]
+
 CAPSULES = {'type': 'lymphloop_competitor_profile', 'source': 'flash', 'reviewed': True,
             'brand_names': ['VitaGlow Lymph+'], 'product_name': 'lymph support capsules', 'form': 'hard_capsule',
             'secondary_forms': ['softgel'], 'container_look': 'white HDPE bottle with an orange cap and an orange label',
@@ -367,11 +374,10 @@ class LamaCaptionMask(unittest.TestCase):
     def test_text_left_inside_a_cleaned_area_is_reported(self):
         import caption_lama as cl
         with tempfile.TemporaryDirectory() as td:
-            ocr = Path(td)/'fake_scan'
-            ocr.write_text('#!/bin/sh\nprintf \'{"width":720,"height":1280,"frame_count":3,"detections":['
-                           '{"frame":0,"text":"AND YOUR OWN FAMILY","confidence":1,"bbox":[151,852,415,37]},'
-                           '{"frame":1,"text":"lymphatic","confidence":1,"bbox":[269,300,201,74]},'
-                           '{"frame":2,"text":"AND YOUR OWN FAMILY","confidence":1,"bbox":[151,852,415,37]}]}\' > "$2"\n'); ocr.chmod(0o755)
+            ocr = fake_scanner(td, {'width': 720, 'height': 1280, 'frame_count': 3, 'detections': [
+                {'frame': 0, 'text': 'AND YOUR OWN FAMILY', 'confidence': 1, 'bbox': [151, 852, 415, 37]},
+                {'frame': 1, 'text': 'lymphatic', 'confidence': 1, 'bbox': [269, 300, 201, 74]},
+                {'frame': 2, 'text': 'AND YOUR OWN FAMILY', 'confidence': 1, 'bbox': [151, 852, 415, 37]}]})
             held = {0: [[149, 848, 417, 49]], 1: [[149, 848, 417, 49]]}          # frame 2 was never masked, frame 1's text is elsewhere
             with mock.patch.object(cl.cc, 'scanner', return_value=ocr):
                 left = cl.survivors(Path(td)/'clean.mp4', held, td)
@@ -383,8 +389,7 @@ class LamaCaptionMask(unittest.TestCase):
             src = Path(td)/'in.mp4'; out = Path(td)/'out.mp4'
             media.ff(['-y', '-f', 'lavfi', '-i', 'color=c=gray:s=180x320:r=24:d=0.5', '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
                       '-shortest', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', str(src)])
-            ocr = Path(td)/'fake_scan'                                   # stands in for the Vision OCR binary: no text found
-            ocr.write_text('#!/bin/sh\nprintf \'{"width":180,"height":320,"frame_count":12,"detections":[]}\' > "$2"\n'); ocr.chmod(0o755)
+            ocr = fake_scanner(td, {'width': 180, 'height': 320, 'frame_count': 12, 'detections': []})   # stands in for the OCR program: no text found
             seen = []
             def fake(frames, masks):
                 seen.append(int((masks[0] > 0).sum())); return [np.full_like(frames[0], 200)]
