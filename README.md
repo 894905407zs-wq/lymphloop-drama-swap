@@ -41,9 +41,15 @@ Windows 上把路径换成 `"$env:USERPROFILE\.gemini\config\plugins\lymphloop-d
 | 需要什么 | 用途 | macOS | Windows |
 |---|---|---|---|
 | Python 3.12 环境 | 运行脚本 | 见下面的命令 | 见下面的命令 |
-| ffmpeg 和 ffprobe | 剪辑、抽帧 | `brew install ffmpeg` | `winget install Gyan.FFmpeg` |
+| ffmpeg 和 ffprobe（要带 drawtext 滤镜） | 剪辑、抽帧、烧时间码 | `brew install ffmpeg-full`，见下 | `winget install Gyan.FFmpeg` |
 | Node.js 22 或更新 | 100x 客户端 | 自行安装 | `winget install OpenJS.NodeJS.LTS` |
 | 100x MCP 插件和账号 | 视频生成（付费） | 按 [kezd088/100x-mcp](https://github.com/kezd088/100x-mcp) 的说明安装并登录 | 同左 |
+
+Homebrew 的普通 `ffmpeg` 不带 drawtext 滤镜，技能烧时间码时会报 `Filter not found`。`ffmpeg-full` 装好后不会自动进 PATH，需要加一行：
+
+```bash
+echo 'export PATH="$(brew --prefix ffmpeg-full)/bin:$PATH"' >> ~/.zshrc
+```
 
 100x 插件默认找 `~/.codex/plugin-sources/100x-mcp`，装在别处时把环境变量 `X100_PLUGIN` 指到其中的 `plugins/100x` 目录。
 
@@ -80,7 +86,11 @@ py -3.12 -m venv .venv; .venv\Scripts\python.exe -m pip install -r requirements.
 
 两种识别引擎输出同样格式的结果。RapidOCR 的文字框大小已按 Vision 校准，但两者认字的结果不会逐字相同，极淡的水印在 Windows 上可能需要多看一眼扫描结果。
 
-仓库的 [Actions](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions) 页面会在 macOS 和 Windows 上各跑一遍技能自带的测试。
+Windows 上文字识别在 CPU 上跑，比 Mac 慢：逐帧扫描一段参考片要多等一些时间，流程和结果不变。
+
+[![tests](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions/workflows/tests.yml/badge.svg)](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions/workflows/tests.yml)
+
+每次更新，仓库的 [Actions](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions) 都会在真实的 macOS 和 Windows 机器上各跑一遍技能自带的 540 多项测试（不调用任何付费接口）。`tests/known_failures.txt` 里列的 4 项在加入 Windows 支持之前就不通过，单独记着，不算新问题。
 
 ## 注意
 

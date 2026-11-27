@@ -101,6 +101,7 @@ class Files(unittest.TestCase):
                     try: json.loads(target.read_text())
                     except PermissionError: pass          # Windows: the file is being swapped right now
                     except Exception as e: errors.append(e); return
+                    time.sleep(0.003)                     # a reader that never lets go would starve every writer on Windows
             readers = [threading.Thread(target=read) for _ in range(3)]; writers = [threading.Thread(target=write, args=(n,)) for n in range(6)]
             [t.start() for t in readers + writers]; [t.join() for t in writers]; stop.set(); [t.join() for t in readers]
             self.assertEqual(errors, [])
