@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic local media operations. Source ranges are half-open decoded-frame indices."""
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse
 import hashlib
 import json
@@ -31,9 +32,10 @@ def binary(name):
     override = os.environ.get(name.upper() + '_BIN')
     choices = [override]
     if name == 'ffprobe' and os.environ.get('FFMPEG_BIN'):
-        choices.append(str(Path(os.environ['FFMPEG_BIN']).with_name('ffprobe')))
-    choices += [str(SKILL_BIN / name), shutil.which(name),
-                f'/opt/homebrew/bin/{name}', f'/usr/local/bin/{name}', str(Path.home() / '.local/bin' / name), str(CODEX_TOOLS / name)]
+        choices.append(str(Path(os.environ['FFMPEG_BIN']).with_name(oscompat.exe('ffprobe'))))
+    file = oscompat.exe(name)      # ffmpeg.exe on Windows
+    choices += [str(SKILL_BIN / file), shutil.which(name),
+                f'/opt/homebrew/bin/{name}', f'/usr/local/bin/{name}', str(Path.home() / '.local/bin' / file), str(CODEX_TOOLS / file)]
     for value in choices:
         if value and Path(value).is_file() and os.access(value, os.X_OK):
             return str(Path(value).resolve())

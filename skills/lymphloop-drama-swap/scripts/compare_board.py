@@ -12,6 +12,7 @@ User, 2026-11-19: "做一个像这样的看板，和原片对比，我要看和�
 segment red on the axis. Videos are copied (not moved); the source film is the one recorded at `init`.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, html, json, re, shutil, sys
 from pathlib import Path
 

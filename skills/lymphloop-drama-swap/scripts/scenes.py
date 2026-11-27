@@ -17,6 +17,7 @@ the shot sheets and corrects any cut in RUN/plan/lock_overrides.json: {"S019": "
   scenes.py RUN            # print the lock level of every cut of a run's working master
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, hashlib, json, subprocess, sys
 from pathlib import Path
 

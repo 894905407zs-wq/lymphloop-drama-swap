@@ -1,4 +1,5 @@
 """Remove only source-bound, agent-reviewed title cards from existing clean references."""
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 from pathlib import Path
 import argparse,json,os
 import swap,caption_lama as cl,caption_clean as cc,media_pipeline as media

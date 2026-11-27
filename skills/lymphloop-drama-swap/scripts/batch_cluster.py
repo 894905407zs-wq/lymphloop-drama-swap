@@ -7,6 +7,7 @@ uses `swap.py reuse --from <rep_run>` at 0 generation cost.
 """
 from __future__ import annotations
 
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse
 import concurrent.futures
 import json

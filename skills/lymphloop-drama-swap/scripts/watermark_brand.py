@@ -14,6 +14,7 @@ delivered with watermark frames the scan had missed.
   watermark_brand.py stamp MASTER PLAN_JSON OUT_MP4 RECEIPT_JSON
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, hashlib, json, re, subprocess, sys, time
 from pathlib import Path
 
@@ -32,7 +33,8 @@ SCAN_WORKERS = 4                                         # processes OCR-ing dis
 SPARSE_STEP = 4                                          # first pass: every 4th frame; a mark is on screen for seconds
 DENSE_PAD = 12                                           # then every frame within this many frames of a sparse hit
 TEXT = 'LYMPHLOOP'
-FONTS = ['/System/Library/Fonts/Supplemental/Arial.ttf', '/System/Library/Fonts/Helvetica.ttc', '/Library/Fonts/Arial.ttf']
+FONTS = ['/System/Library/Fonts/Supplemental/Arial.ttf', '/System/Library/Fonts/Helvetica.ttc', '/Library/Fonts/Arial.ttf',
+         *filter(None, [oscompat.find_font(*oscompat.SANS_REGULAR)])]     # Windows / Linux: the installed Arial-like sans
 
 
 def set_target(target):
@@ -159,7 +161,8 @@ def fast_scan(binary, source, work, sha256, pattern, target, n_frames, ranges=No
         jobs = split_ranges(rngs, workers)
         def one(k):
             out = work/f'{name}-{k}.json'
-            subprocess.run([str(binary), str(source), str(out), sha256, pattern, target, str(st), ','.join(f'{a}-{b}' for a, b in [jobs[k]])],
+            import vision_scan
+            subprocess.run([*vision_scan.argv(binary), str(source), str(out), sha256, pattern, target, str(st), ','.join(f'{a}-{b}' for a, b in [jobs[k]])],
                            check=True, capture_output=True)
             return json.loads(out.read_text())
         with ThreadPoolExecutor(max(1, min(workers, len(jobs)))) as ex:
@@ -186,7 +189,7 @@ def edge_scan(source, out_json, work=None, step=STEP, ranges=None):
     info = media.probe(str(source)); W, H = int(info['video']['width']), int(info['video']['height'])
     scanner = caption_clean.scanner(work); ff = media.binary('ffmpeg')
     source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
-    scanner_sha = hashlib.sha256(Path(scanner).read_bytes()).hexdigest()
+    scanner_sha = caption_clean.vision_fingerprint(scanner)
 
     def one(v):
         name, x0, y0, cw, ch, t, c = v; found = []
@@ -212,7 +215,7 @@ def edge_scan(source, out_json, work=None, step=STEP, ranges=None):
                             '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '12', str(clip)], check=True)
             for attempt in range(3):
                 try:
-                    subprocess.run([str(scanner), str(clip), str(scan)], check=True, capture_output=True)
+                    subprocess.run([*caption_clean.argv(scanner), str(clip), str(scan)], check=True, capture_output=True)
                     if json.loads(scan.read_text()).get('frame_count') != len(picked):
                         raise RuntimeError(f'Incomplete edge scan {name}: expected {len(picked)} frames')
                     break
@@ -715,7 +718,7 @@ def position_scan(source, places, work, ranges=None, step=SPARSE_STEP, pad=DENSE
     ncols = max(1, round((len(slots) * sh / sw) ** 0.5)); nrows = -(-len(slots) // ncols)
     by_id = {p['id']: p for p in places}; scanner = caption_clean.scanner(work); ff = media.binary('ffmpeg')
     ranges = merge_ranges(ranges or [(0, n)], n)
-    source_sha, scanner_sha = _sha(source), _sha(scanner)
+    source_sha, scanner_sha = _sha(source), caption_clean.vision_fingerprint(scanner)
 
     def one(job):
         name, windows, st = job
@@ -764,7 +767,7 @@ def position_scan(source, places, work, ranges=None, step=SPARSE_STEP, pad=DENSE
                             '-frames:v', str(len(picked)), '-fps_mode', 'passthrough', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '12', str(clip)], check=True)
             for attempt in range(3):
                 try:
-                    subprocess.run([str(scanner), str(clip), str(out)], check=True, capture_output=True)
+                    subprocess.run([*caption_clean.argv(scanner), str(clip), str(out)], check=True, capture_output=True)
                     if json.loads(out.read_text()).get('frame_count') != len(picked):
                         raise RuntimeError(f'Incomplete position OCR {name}: expected {len(picked)} frames, got {json.loads(out.read_text()).get("frame_count")}')
                     break

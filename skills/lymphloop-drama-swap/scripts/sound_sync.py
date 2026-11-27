@@ -10,6 +10,7 @@ So:
   can rebuild the sound with `swap.py splice --audio ... --audio-window ...` when it is off.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import subprocess
 from pathlib import Path
 import numpy as np

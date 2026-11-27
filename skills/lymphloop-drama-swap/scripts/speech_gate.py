@@ -11,6 +11,7 @@ word that was rewritten elsewhere in the same film. This transcribes the master 
   speech_gate.py RUN [MASTER]     prints the report; swap.py final-screen runs it and stores it next to the screen
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, hashlib, difflib, json, re, sys
 from pathlib import Path
 import competitor as comp

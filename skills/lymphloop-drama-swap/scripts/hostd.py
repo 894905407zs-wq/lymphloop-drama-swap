@@ -35,7 +35,8 @@ Opt-in fallbacks (off unless set; files then sit on a third-party public host, s
   hostd.py stop
 """
 from __future__ import annotations
-import argparse, email.utils, fcntl, functools, hashlib, http.server, json, mimetypes, os, re, secrets, shutil, signal, socket, subprocess, sys, threading, time, urllib.error, urllib.request
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
+import argparse, email.utils, functools, hashlib, http.server, json, mimetypes, os, re, secrets, shutil, signal, socket, subprocess, sys, threading, time, urllib.error, urllib.request
 from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
@@ -57,9 +58,9 @@ def default_root(skill=None):
 
 def cloudflared_path():
     """CLOUDFLARED_BIN -> this skill's bin/cloudflared -> the Codex wan-media install -> PATH."""
-    for c in (os.environ.get('CLOUDFLARED_BIN'), SKILL/'bin'/'cloudflared', Path.home()/'.codex/tools/wan-media/2026.10.0/cloudflared', shutil.which('cloudflared')):
+    for c in (os.environ.get('CLOUDFLARED_BIN'), SKILL/'bin'/oscompat.exe('cloudflared'), Path.home()/'.codex/tools/wan-media/2026.10.0'/oscompat.exe('cloudflared'), shutil.which('cloudflared')):
         if c and Path(c).is_file(): return Path(c)
-    return SKILL/'bin'/'cloudflared'
+    return SKILL/'bin'/oscompat.exe('cloudflared')
 
 
 ROOT = default_root()
@@ -92,8 +93,16 @@ def _write_state(**kw):
 
 
 def _alive(pid):
-    try: os.kill(int(pid), 0); return True
-    except Exception: return False
+    return oscompat.pid_alive(pid)       # os.kill(pid, 0) would END the process on Windows
+
+
+def _terminate(pid):
+    """Stop a daemon. Windows has no SIGTERM handler to run: end the daemon together with its tunnel process and
+    clear the state it would have cleared itself."""
+    if oscompat.WINDOWS:
+        subprocess.run(['taskkill', '/PID', str(int(pid)), '/T', '/F'], capture_output=True)
+        _write_state(pid=None, url=None, stopped_at=time.time())
+    else: os.kill(int(pid), signal.SIGTERM)
 
 
 def _digest(path, n=16):
@@ -272,8 +281,9 @@ def serve():
         _write_state(pid=None, url=None, stopped_at=time.time()); sys.exit(0)
 
     def recycle(*_): want_new[0] = True; wake.set()
-    signal.signal(signal.SIGTERM, stop); signal.signal(signal.SIGINT, stop); signal.signal(signal.SIGUSR1, recycle)
-    _write_state(pid=os.getpid(), restartable=True)
+    signal.signal(signal.SIGTERM, stop); signal.signal(signal.SIGINT, stop)
+    if hasattr(signal, 'SIGUSR1'): signal.signal(signal.SIGUSR1, recycle)     # no user signals on Windows: restart_tunnel stops and starts the daemon there
+    _write_state(pid=os.getpid(), restartable=hasattr(signal, 'SIGUSR1'))
     while True:
         if proc is None or proc.poll() is not None or want_new[0]:
             reason = 'requested' if want_new[0] else 'started' if proc is None else 'tunnel exited'
@@ -311,14 +321,14 @@ def serve():
 def ensure(timeout=300):
     """Base URL of a healthy daemon; starts one (detached) if none is running."""
     ROOT.mkdir(parents=True, exist_ok=True)
-    with open(LOCK, 'w') as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
+    with open(LOCK, 'a') as lk:
+        oscompat.lock_file(lk)
         s = _read_state()
         if not (s.get('pid') and _alive(s['pid'])):
             _write_state(pid=None, url=None, healthy_at=0, launched_at=time.time())
             log = open(LOG, 'a')
             subprocess.Popen([sys.executable, str(Path(__file__).resolve()), 'serve'], stdout=log, stderr=log, stdin=subprocess.DEVNULL,
-                             start_new_session=True)
+                             **oscompat.detached())
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             s = _read_state()
@@ -364,7 +374,7 @@ def publish_litterbox(path):
     root = ROOT/'litterbox'; root.mkdir(parents=True, exist_ok=True)
     cache = root/(digest + '.json'); lock = root/(digest + '.lock')
     with lock.open('a+') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+        oscompat.lock_file(f)
         if cache.exists():
             item = json.loads(cache.read_text())
             if time.time() - item.get('uploaded_at', 0) < 60 * 3600: return item['url']
@@ -390,7 +400,7 @@ def publish_tempfile(path):
     root = ROOT/'tempfile'; root.mkdir(parents=True, exist_ok=True)
     cache = root/(digest + '.json'); lock = root/(digest + '.lock')
     with lock.open('a+') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+        oscompat.lock_file(f)
         if cache.exists():
             item = json.loads(cache.read_text())
             if time.time() - item.get('uploaded_at', 0) < 20 * 3600: return item['url']
@@ -413,7 +423,7 @@ def publish_tempfile(path):
 # ---------------------------------------------------------------- fetch gate
 def _gate_lock():
     GATE_DIR.mkdir(parents=True, exist_ok=True)
-    f = open(GATE_DIR/'gate.lock', 'a+'); fcntl.flock(f, fcntl.LOCK_EX); return f
+    f = open(GATE_DIR/'gate.lock', 'a+'); oscompat.lock_file(f); return f
 
 
 def _gate_read():
@@ -496,7 +506,7 @@ def status():
 
 def stop():
     s = _read_state()
-    if s.get('pid') and _alive(s['pid']): os.kill(int(s['pid']), signal.SIGTERM)
+    if s.get('pid') and _alive(s['pid']): _terminate(s['pid'])
     return status()
 
 
@@ -505,9 +515,9 @@ def restart_tunnel(timeout=300):
     stopped and started again instead. Tasks already fetching from the old URL fail and are resubmitted."""
     s = _read_state(); old = s.get('url')
     if s.get('pid') and _alive(s['pid']):
-        if s.get('restartable'): os.kill(int(s['pid']), signal.SIGUSR1)
+        if s.get('restartable') and hasattr(signal, 'SIGUSR1'): os.kill(int(s['pid']), signal.SIGUSR1)
         else:
-            os.kill(int(s['pid']), signal.SIGTERM); deadline = time.monotonic() + 20
+            _terminate(s['pid']); deadline = time.monotonic() + 20
             while _alive(s['pid']) and time.monotonic() < deadline: time.sleep(0.5)
             if _alive(s['pid']): raise Error(f'old daemon {s["pid"]} did not stop')
     deadline = time.monotonic() + timeout

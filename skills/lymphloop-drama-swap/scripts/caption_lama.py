@@ -10,6 +10,7 @@ Model: Carve/LaMa-ONNX `lama_fp32.onnx` (208 MB, fixed 512x512 input), cached on
 ~/.cache/lymphloop-models and shared by both skill copies; downloaded on first use and checked by sha256.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import difflib, hashlib, json, os, re, subprocess, sys, threading, urllib.request
 from pathlib import Path
 import cv2, numpy as np
@@ -389,7 +390,7 @@ def survivors(video, held, work):
     """Readable text still sitting inside an area that was masked: {frame: [texts]}. The cleaned clip is read again by
     OCR, so a caption the inpaint missed is reported instead of being sent to the generator."""
     video = Path(video); scan_path = Path(work)/(video.stem + '.after.text.json')
-    subprocess.run([str(cc.scanner(work)), str(video), str(scan_path)], check=True, capture_output=True)
+    subprocess.run([*cc.argv(cc.scanner(work)), str(video), str(scan_path)], check=True, capture_output=True)
     scan = json.loads(scan_path.read_text()); W, H = scan['width'], scan['height']; masks = {}; left = {}
     for d in scan['detections']:
         f = d['frame']; x, y, w, h = d['bbox']

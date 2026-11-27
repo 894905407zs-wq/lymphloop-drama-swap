@@ -9,6 +9,7 @@ arrived and passed container checks, not that the content passed editorial QA.
 """
 from __future__ import annotations
 
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse
 import base64
 import contextlib
@@ -108,33 +109,23 @@ def lock(path, wait=0.0, poll=0.5, what="this exact request"):
         deadline = time.monotonic() + max(0.0, float(wait))
         while True:
             try:
-                if os.name == "nt":
-                    import msvcrt
-                    f.seek(0); f.write(b"0"); f.flush(); f.seek(0)
-                    msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
-                else:
-                    import fcntl
-                    fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                oscompat.lock_file(f, blocking=False)       # flock, or LockFileEx on Windows (same lock as swap.flock)
                 break
             except OSError:
                 if time.monotonic() >= deadline:
                     raise AdapterError(f"Another worker owns {what}{_lock_holder(path)}; resume after it finishes") from None
                 time.sleep(poll)
-        if os.name != "nt":
-            try:
-                f.truncate(0)
-                f.write(json.dumps({"pid": os.getpid(), "command": " ".join([Path(sys.argv[0]).name, *sys.argv[1:2]]) if sys.argv else "?",
-                                    "since": utc()}).encode())
-                f.flush()
-            except OSError:
-                pass
+        try:
+            f.truncate(0)
+            f.write(json.dumps({"pid": os.getpid(), "command": " ".join([Path(sys.argv[0]).name, *sys.argv[1:2]]) if sys.argv else "?",
+                                "since": utc()}).encode())
+            f.flush()
+        except OSError:
+            pass
         try:
             yield
         finally:
-            if os.name == "nt":
-                f.seek(0); msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            oscompat.unlock_file(f)
 
 
 def credential():

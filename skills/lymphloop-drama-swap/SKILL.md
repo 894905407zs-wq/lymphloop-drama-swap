@@ -38,8 +38,8 @@ description: 将任意竞品保健品（滴剂、硬胶囊、软胶囊、片剂�
 - **一次成片**（用户 2026-11-11）：每个目标段**最多一次付费生成**，**生成什么都要用**，没有第二次付费。没有产生付费结果的尝试（任务失败已全额退款、提交时被拒且未扣费、参考片没发布出去）由脚本自动用同样输入重提，每段最多 3 次，全部记进账本 `unpaid_attempts`；状态不明（超时、断线）可能已被接收扣费，绝不盲目重提，先查 APIMART；401/402/403（密钥、余额）要用户处理。成功率全靠提交前做对：参考片干净（无字幕、无水印、首尾不带邻镜头的帧）；竞品逐镜头找到每一处并写成目标产品；目标动作按原片手的运动轨迹选；服用一律闭唇轻抿；提示词按官方写法。审片只记录缺陷和做免费的本地处理（裁切、`select` 自动去字幕、拼接、定点修补）。
 - **提交前检查实际上传的参考片**。先用 `generate --prepare-only` 产出准确文件和帧板，亲自看：字幕和水印去干净了、修补处看不出痕迹、首尾没有邻镜头的帧、结尾定住的是本段最后一帧；复听有消音的窗口，再按 controlled-edit.md §7 逐条自查提示词，然后提交该段（付费只此一次）。
 - **凭据**：默认零外部 Gemini 模式无需 `GEMINI_API_KEY`（仅 `LYMPHLOOP_ALLOW_EXTERNAL_GEMINI=1` 时读取）；APIMART 用 `APIMART_API_KEY` 或钥匙串 `codex-seedance-apimart/api-key`（钥匙串条目沿用旧名）；都不出现在日志。
-- **运行环境**：macOS（OCR 用 Vision），Python 3.12 venv 在 `$SKILL/.venv`（numpy、opencv-python-headless、Pillow、faster-whisper、onnxruntime）；去字幕用的 LaMa 模型（208 MB）第一次用时自动下载到 `~/.cache/lymphloop-models/`，所有命令用 `$PY=$SKILL/.venv/bin/python` 运行；ffmpeg / ffprobe 找 `$SKILL/bin/` → PATH → `~/.codex/tools/ffmpeg/`，cloudflared 找 `$SKILL/bin/` → `~/.codex/tools/wan-media/2026.10.0/`；公网托管缓存在 `~/.cache/lymphloop-host-claude/`。需要外网（APIMART、Gemini、Cloudflare）和 macOS 钥匙串读取权限。
-- **首次安装（仓库版）**：`.venv` 和 `bin/` 不随仓库分发。`$SKILL/.venv` 不存在时先建环境：`python3.12 -m venv "$SKILL/.venv" && "$SKILL/.venv/bin/pip" install -r "$SKILL/requirements.txt"`；ffmpeg / ffprobe 装到 PATH 即可（如 `brew install ffmpeg`）；默认 100x 渠道不需要 cloudflared。100x 客户端 `scripts/x100.py` 已随包提供，它调用本机安装的 100x MCP 桥（默认 `~/.codex/plugin-sources/100x-mcp/plugins/100x`，可用 `X100_PLUGIN` 指到别处），需要 Node 22+ 和已登录的 100x 账号。
+- **运行环境**：macOS 或 Windows（Linux 同 Windows 的做法）。文字和人脸识别按系统选引擎，输出同一种 JSON，调用方不用区分：macOS 用系统 Vision（三个 `.swift`，首次用时编译），Windows / Linux 用 RapidOCR + OpenCV YuNet（`scripts/vision_scan.py`；`LYMPHLOOP_OCR_ENGINE=rapidocr` 可在 Mac 上也选它）。系统差异（文件锁、进程、字体、Windows 上的 UTF-8）都收在 `scripts/oscompat.py`。Python 3.12 venv 在 `$SKILL/.venv`（numpy、opencv-python-headless、Pillow、faster-whisper、onnxruntime，Windows / Linux 另加 rapidocr）；去字幕用的 LaMa 模型（208 MB）第一次用时自动下载到 `~/.cache/lymphloop-models/`，所有命令用 `$PY=$SKILL/.venv/bin/python` 运行（Windows 是 `$SKILL\.venv\Scripts\python.exe`，文档里其余写法不变）；ffmpeg / ffprobe 找 `$SKILL/bin/` → PATH → `~/.codex/tools/ffmpeg/`，cloudflared 找 `$SKILL/bin/` → `~/.codex/tools/wan-media/2026.10.0/`；公网托管缓存在 `~/.cache/lymphloop-host-claude/`。需要外网（APIMART、Gemini、Cloudflare）和系统凭据库读取权限（macOS 钥匙串；Windows 凭据管理器，或直接用环境变量）。Windows 上人脸模型（232 KB）第一次用时自动下载到同一个模型目录。
+- **首次安装（仓库版）**：`.venv` 和 `bin/` 不随仓库分发。`$SKILL/.venv` 不存在时先建环境：`python3.12 -m venv "$SKILL/.venv" && "$SKILL/.venv/bin/pip" install -r "$SKILL/requirements.txt"`；ffmpeg / ffprobe 装到 PATH 即可（如 `brew install ffmpeg`）；默认 100x 渠道不需要 cloudflared。**Windows**（PowerShell，在 `$SKILL` 目录下）：`py -3.12 -m venv .venv; .venv\Scripts\python.exe -m pip install -r requirements.txt`，ffmpeg 用 `winget install Gyan.FFmpeg`，Node 用 `winget install OpenJS.NodeJS.LTS`；脚本在 Windows 上会自己切到 UTF-8 模式，不用另外设置。装好后 `$PY scripts/oscompat.py` 打印本机情况（系统、编码、字体），`$PY scripts/watermark_cleanup.py preflight` 打印识别引擎。100x 客户端 `scripts/x100.py` 已随包提供，它调用本机安装的 100x MCP 桥（默认 `~/.codex/plugin-sources/100x-mcp/plugins/100x`，可用 `X100_PLUGIN` 指到别处），需要 Node 22+ 和已登录的 100x 账号。
 
 ## 流程（每条视频一个 RUN 目录，`scripts/swap.py` 子命令按序）
 
@@ -175,7 +175,7 @@ description: 将任意竞品保健品（滴剂、硬胶囊、软胶囊、片剂�
 | `scripts/words.py` | 逐词时间（定消音窗口、核对生成台词）、消音窗口切词检查 |
 | `scripts/apimart_wan.py` | APIMART seedance-2.0 视频参考生成的批量提交（9:16、720p、时长按段，全是请求参数；沿用脚本文件名） |
 | `scripts/hostd.py` | 备用：本地文件服务 + Cloudflare 隧道（`LYMPHLOOP_VIDEO_HOST=tunnel` 时才用；默认参考片直传 APIMART） |
-| `scripts/caption_clean.py` + `scan_text.swift` | 字幕 OCR、把残留字幕从生成片上抹掉、字幕关和残留文字关 |
+| `scripts/caption_clean.py` + `scan_text.swift`（macOS）/ `vision_scan.py`（Windows、Linux） | 字幕 OCR、把残留字幕从生成片上抹掉、字幕关和残留文字关 |
 | `scripts/caption_lama.py` | 参考片送模型前去字幕、去水印（LaMa 修补模型，整行文字框遮罩；修补结果按内容缓存，重做参考片不再重算） |
 | `scripts/sound_sync.py` | 量生成声音相对原片的偏移；人工补救时把原片声音配到生成画面下 |
 | `scripts/words.py` | 词级时间戳（本地 Whisper）：定消音窗口、核对生成片每个词的时间 |
@@ -185,11 +185,13 @@ description: 将任意竞品保健品（滴剂、硬胶囊、软胶囊、片剂�
 | `scripts/shots.py` | 切镜头、帧板、导帧 |
 | `scripts/cutscan.py` | 逐帧切点（不合并短镜）、段边界吸附、闪回关取点与给 agent 看的大格帧板 |
 | `scripts/media_pipeline.py` | 探帧、规范化、冻结与回剪渲染（每块按内容缓存） |
-| `scripts/watermark_cleanup.py` + `scan_watermark.swift` | 漂浮水印扫描与清除 |
+| `scripts/watermark_cleanup.py` + `scan_watermark.swift`（macOS）/ `vision_scan.py`（Windows、Linux） | 漂浮水印扫描与清除 |
+| `scripts/vision_scan.py` | 识别引擎的统一入口：给调用方一条扫描命令（macOS 是编译好的 Vision 扫描器，其余系统是本文件的 RapidOCR / YuNet 实现），三种扫描的 JSON 格式两边一致 |
+| `scripts/oscompat.py` | 系统差异集中处：文件锁（flock / LockFileEx）、进程存活与后台启动、字体目录、可执行文件名、Windows 上自动切 UTF-8 模式；每个脚本第一行导入它 |
 | `scripts/watermark_template.py` + `assets/watermarks/` | 存好的水印模板：固定位置逐帧笔画比对（不 OCR），扫描、参考片、终检共用；`build` 从 OCR 扫过的片子建模板 |
 | `scripts/watermark_brand.py` | 边缘补扫（旋转放大的四边条）、白色 LYMPHLOOP 覆盖与抽检（按块盖、按内容缓存） |
 | `scripts/region_inpaint.py` | 成片里原片画面的局部残留、生成段里的残留文字（`:purple` / `:ink`）；拒绝在生成段上整框填充（3c） |
-| `scripts/ref_framing.py` + `scan_people.swift` | 提交前检查参考片有没有把原片里的人裁出画（3d） |
+| `scripts/ref_framing.py` + `scan_people.swift`（macOS）/ `vision_scan.py`（Windows、Linux，只找人脸） | 提交前检查参考片有没有把原片里的人裁出画（3d） |
 | `references/carton-swap.md` | 换纸盒的段落：两张图、五段式范例（用户 2026-11-20） |
 | `references/controlled-edit.md` | 产品物理、动作对照、片源规则、审片的背景知识和历次实测；提示词写法以 rules-now.md 为准 |
 | `references/history-edit-mode.md` | 编辑模式时期（到 2026-11-11）的模板和实测记录，只供查阅 |

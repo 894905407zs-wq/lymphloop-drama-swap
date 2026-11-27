@@ -3,6 +3,7 @@
 Only runs on a source-bound, agent-reviewed caption region before video submission.
 The ordinary reference cache keeps the truthful additional-encode provenance.
 """
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 from pathlib import Path
 import argparse,json,subprocess,os
 from concurrent.futures import ThreadPoolExecutor

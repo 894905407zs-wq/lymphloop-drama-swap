@@ -26,6 +26,7 @@ The filename is retained for existing callers. References use the shared host an
 cached image uploads. RUN/generation/jobs holds the durable submission ledger.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, mimetypes, os, re, secrets, subprocess, sys, threading, time, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
@@ -83,9 +84,17 @@ NO_RESUBMIT_HTTP = {401, 402, 403}      # key, balance, permission: the user has
 def credential():
     key = os.environ.get('APIMART_API_KEY', '').strip()
     if key: return key
-    r = subprocess.run(['security', 'find-generic-password', '-s', 'codex-seedance-apimart', '-a', 'api-key', '-w'], capture_output=True, text=True)
-    if r.returncode or not r.stdout.strip(): raise AdapterError('APIMART key not found (APIMART_API_KEY or keychain codex-seedance-apimart/api-key)')
-    return r.stdout.strip()
+    if sys.platform == 'darwin':
+        r = subprocess.run(['security', 'find-generic-password', '-s', 'codex-seedance-apimart', '-a', 'api-key', '-w'], capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip(): return r.stdout.strip()
+    else:
+        try:      # optional: pip install keyring (Windows Credential Manager / Linux Secret Service)
+            if sys.platform == 'win32': from keyring.backends.Windows import WinVaultKeyring as Ring
+            else: from keyring.backends.SecretService import Keyring as Ring
+            key = (Ring().get_password('codex-seedance-apimart', 'api-key') or '').strip()
+            if key: return key
+        except Exception: pass
+    raise AdapterError('APIMART key not found (APIMART_API_KEY, or the system credential store entry codex-seedance-apimart/api-key)')
 
 
 class HTTPFailure(AdapterError):

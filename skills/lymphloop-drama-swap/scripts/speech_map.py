@@ -9,6 +9,7 @@ shot cuts in sentence pauses (semantic breaks first), never across a sentence. 1
   speech_map.py transcribe RUN START_S END_S      # cached Gemini Flash sentence timestamps (absolute seconds)
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, subprocess, sys
 from pathlib import Path
 

@@ -40,6 +40,7 @@ writes a card-mode stub (# cards / # views / # voice) by default; `--mode refere
     (write RUN/cards/cast.json)  shot_regen.py cards --run RUN     # build the character cards (scripts/cards.py)
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, hashlib, json, math, re, subprocess, sys, time
 from fractions import Fraction
 from pathlib import Path

@@ -9,6 +9,7 @@ is searched in the target by a few anchor frames and then checked over its whole
   reuse.py match DONOR.mp4 TARGET.mp4 --range A-B [--cache DIR]     # where donor frames [A, B) are in the target
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, hashlib, json, subprocess, sys
 from pathlib import Path
 

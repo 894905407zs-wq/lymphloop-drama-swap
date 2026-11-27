@@ -10,6 +10,7 @@ A cut is a frame whose mean absolute difference to the previous frame is > ABS a
 (validated by eye on 26 masters, 2026-11-21: dissolves and light leaks give a few extra cuts, which only make a segment
 or a checked window a little longer).
 """
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import json, subprocess
 from fractions import Fraction
 from pathlib import Path
@@ -190,8 +191,9 @@ def spot_sheets(video, spots, out_dir, fps, cols=5, max_rows=3, w=300):
     out_dir = Path(out_dir); out_dir.mkdir(parents=True, exist_ok=True)
     info = media.probe(str(video)); vw, vh = int(info['video']['width']), int(info['video']['height'])
     h = int(round(w * vh / vw / 2) * 2)
-    try: font = ImageFont.truetype('/System/Library/Fonts/Helvetica.ttc', 20); big = ImageFont.truetype('/System/Library/Fonts/Helvetica.ttc', 24)
-    except OSError: font = big = ImageFont.load_default()
+    face = oscompat.find_font('Helvetica.ttc', *oscompat.SANS_REGULAR)
+    try: font = ImageFont.truetype(face, 20); big = ImageFont.truetype(face, 24)
+    except (OSError, AttributeError, TypeError): font = big = ImageFont.load_default()
     out, n = [], 0
     for sp in spots:
         fr = sp['frames']; a, b = fr[0], fr[-1] + 1

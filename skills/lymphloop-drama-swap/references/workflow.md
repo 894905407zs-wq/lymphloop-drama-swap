@@ -1,6 +1,6 @@
 # 执行细则与文件布局
 
-`$SKILL` = 本 skill 根目录；`$PY` = `$SKILL/.venv/bin/python`，带 opencv 的解释器（首次建：`"$PYTHON" -m venv $SKILL/.venv && $SKILL/.venv/bin/pip install opencv-python-headless numpy Pillow faster-whisper onnxruntime`）。所有命令都可重复执行，已完成的产物不会重做。
+`$SKILL` = 本 skill 根目录；`$PY` = `$SKILL/.venv/bin/python`（Windows：`$SKILL\.venv\Scripts\python.exe`），带 opencv 的解释器（首次建：`"$PYTHON" -m venv $SKILL/.venv && $SKILL/.venv/bin/pip install opencv-python-headless numpy Pillow faster-whisper onnxruntime`）。所有命令都可重复执行，已完成的产物不会重做。
 
 ## RUN 目录
 

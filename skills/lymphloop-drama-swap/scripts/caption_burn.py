@@ -15,11 +15,12 @@ keep theirs, so captions came and went inside one film. Two steps, both local an
 `swap.py captions --run RUN` runs both for every selected generated segment.
 """
 from __future__ import annotations
-import argparse, difflib, json, re, statistics, subprocess
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
+import argparse, difflib, json, os, re, statistics, subprocess
 from pathlib import Path
 import media_pipeline as media
 
-FONT_FILES = [  # sans faces that ship with macOS; every face in a collection is tried, plus whatever the user installed
+FONT_FILES = [  # sans faces that ship with macOS (Windows and Linux faces are added below); every face in a collection is tried, plus whatever the user installed
     '/System/Library/Fonts/Supplemental/Arial.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Black.ttf',
     '/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf', '/System/Library/Fonts/Helvetica.ttc', '/System/Library/Fonts/HelveticaNeue.ttc',
     '/System/Library/Fonts/Avenir.ttc', '/System/Library/Fonts/Avenir Next.ttc', '/System/Library/Fonts/Supplemental/Futura.ttc',
@@ -30,7 +31,18 @@ FONT_FILES = [  # sans faces that ship with macOS; every face in a collection is
     '/System/Library/Fonts/Supplemental/DIN Condensed Bold.ttf', '/System/Library/Fonts/Supplemental/DIN Alternate Bold.ttf',
     '/System/Library/Fonts/Supplemental/Arial Narrow.ttf', '/System/Library/Fonts/Supplemental/Arial Narrow Bold.ttf',
 ]
+if oscompat.WINDOWS:   # the sans faces that ship with Windows (and Office); fonts the user installed are picked up from FONT_DIRS
+    _WIN = Path(os.environ.get('WINDIR', r'C:\Windows')) / 'Fonts'
+    FONT_FILES += [str(_WIN / f) for f in (
+        'arial.ttf', 'arialbd.ttf', 'ariblk.ttf', 'segoeui.ttf', 'segoeuib.ttf', 'seguisb.ttf', 'seguibl.ttf', 'verdana.ttf', 'verdanab.ttf',
+        'tahoma.ttf', 'tahomabd.ttf', 'trebuc.ttf', 'trebucbd.ttf', 'impact.ttf', 'calibri.ttf', 'calibrib.ttf', 'framd.ttf', 'micross.ttf',
+        'bahnschrift.ttf', 'ARIALN.TTF', 'ARIALNB.TTF')]
+elif not oscompat.MACOS:
+    FONT_FILES += [f for f in (oscompat.find_font(n) for n in (
+        'DejaVuSans.ttf', 'DejaVuSans-Bold.ttf', 'DejaVuSansCondensed-Bold.ttf', 'LiberationSans-Regular.ttf', 'LiberationSans-Bold.ttf',
+        'LiberationSansNarrow-Bold.ttf', 'NotoSans-Regular.ttf', 'NotoSans-Bold.ttf')) if f]
 FONT_DIRS = [Path.home() / 'Library/Fonts', Path('/Library/Fonts')]
+if oscompat.WINDOWS and os.environ.get('LOCALAPPDATA'): FONT_DIRS.append(Path(os.environ['LOCALAPPDATA']) / 'Microsoft' / 'Windows' / 'Fonts')
 SKIP_FACE = re.compile(r'italic|oblique|light|thin', re.I)
 
 

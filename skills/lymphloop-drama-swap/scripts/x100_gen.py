@@ -16,6 +16,7 @@ Rules kept from the main channel: one paid result per job; a job id other than G
 asked for (`user_approved_regen` or `shot_regen` carries their words or goof rule); a job whose ledger already has a
 downloaded result is reused without re-charging. Credentials stay in the 100x bridge (keychain `100x-codex`)."""
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, hashlib, json, os, re, subprocess, sys, time, uuid
 from pathlib import Path
 
@@ -66,8 +67,8 @@ def now(): return time.strftime('%Y-%m-%dT%H:%M:%S')
 
 def client_module():
     for d in NODE_DIRS:
-        if d.is_dir() and str(d) not in os.environ.get('PATH', '').split(':'):
-            os.environ['PATH'] = f"{d}:{os.environ.get('PATH', '')}"
+        if d.is_dir() and str(d) not in os.environ.get('PATH', '').split(os.pathsep):
+            os.environ['PATH'] = f"{d}{os.pathsep}{os.environ.get('PATH', '')}"
     for d in CLIENT_DIRS:
         if (d/'x100.py').is_file():
             if str(d) not in sys.path:

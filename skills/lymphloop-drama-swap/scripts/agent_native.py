@@ -8,8 +8,9 @@ native video, image, and audio understanding via `read_file`. External Gemini AP
 """
 from __future__ import annotations
 
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import contextlib
-import fcntl
+import oscompat
 import json
 import os
 import re
@@ -465,7 +466,7 @@ def local_slot(kind: str = 'heavy', slots: int | None = None):
         for i in range(n):
             fh = open(slot_dir / f'{kind}-{i}.lock', 'a+b')
             try:
-                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                oscompat.lock_file(fh, blocking=False)
                 acquired = fh
                 break
             except OSError:
@@ -476,7 +477,7 @@ def local_slot(kind: str = 'heavy', slots: int | None = None):
         yield
     finally:
         try:
-            fcntl.flock(acquired.fileno(), fcntl.LOCK_UN)
+            oscompat.unlock_file(acquired)
         finally:
             acquired.close()
 

@@ -1,0 +1,48 @@
+name: tests
+
+# The skill's own test suite on macOS and Windows. No paid API is called and no key is needed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+        working-directory: skills/lymphloop-drama-swap
+    env:
+      PYTHONUTF8: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: skills/lymphloop-drama-swap/requirements.txt
+      - name: Python packages
+        run: python -m pip install -r requirements.txt
+      - name: RapidOCR on macOS too (the tests compare it with Vision)
+        if: runner.os == 'macOS'
+        run: python -m pip install "rapidocr==3.10.0"
+      - name: ffmpeg
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then choco install ffmpeg -y --no-progress; else brew install ffmpeg; fi
+          ffmpeg -version | head -1
+      - name: This machine
+        run: python scripts/oscompat.py
+      - name: Tests
+        run: python tests/run_ci.py

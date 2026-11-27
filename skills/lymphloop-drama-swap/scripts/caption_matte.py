@@ -11,6 +11,7 @@ the film's own look. It is laid over the generated picture at the moment the sam
 speech can come early or late). Lines that carried a replaced word (the old brand, "gotero" ...) cannot be copied;
 they are drawn new in the measured style (caption_burn), only inside their own time window."""
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import difflib, json, re, subprocess, sys
 from fractions import Fraction
 from pathlib import Path

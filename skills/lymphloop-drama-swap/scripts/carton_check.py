@@ -37,6 +37,7 @@ round (goofs.json) or passes --carton-ok "看过 sheet：<why this is not a goof
 background object). The sheet with every flagged frame, box and number is written next to the JSON.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, re, subprocess, sys, tempfile
 from pathlib import Path
 
@@ -83,11 +84,11 @@ def samples(video, t0=0.0, t1=None, work=None):
 
 
 def words(clip, work):
-    """{sample index: [LYMPHATIC boxes]} by macOS Vision OCR (the skill's scan_text)."""
+    """{sample index: [LYMPHATIC boxes]} by OCR (the skill's text scanner, see vision_scan.py)."""
     import caption_clean
     out = Path(work)/'ocr.json'
     # one compiled scanner for every check on this machine (swiftc takes seconds; parallel checks share the lock)
-    subprocess.run([str(caption_clean.scanner(Path(tempfile.gettempdir())/'lymphloop-carton-ocr')), str(clip), str(out)], check=True, capture_output=True)
+    subprocess.run([*caption_clean.argv(caption_clean.scanner(Path(tempfile.gettempdir())/'lymphloop-carton-ocr')), str(clip), str(out)], check=True, capture_output=True)
     by = {}
     for d in json.loads(out.read_text()).get('detections') or []:
         if WORD_RE.search(str(d.get('text', '')).upper()):

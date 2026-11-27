@@ -6,8 +6,9 @@ Measured 11-14 (batch6, 52 segments): references zoom-cropped to hide the old bo
 new clothes or a new scene. Crops that kept every face in the frame (NV0560 G02/G04, batch5 close-ups) were fine.
 
 For a few moments of the segment the reference frame is located inside the original frame (template matching over
-scales), and macOS Vision finds the faces in the original frame. A face whose box is mostly outside the reference's
+scales), and the face detector (macOS Vision, or OpenCV YuNet on Windows / Linux) finds the faces in the original frame. A face whose box is mostly outside the reference's
 crop window is a person the model will not see."""
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import json, subprocess
 from pathlib import Path
 
@@ -15,11 +16,9 @@ HERE = Path(__file__).resolve().parent
 
 
 def detector(work):
-    binary = Path(work)/'scan_people'; src = HERE/'scan_people.swift'
-    if not binary.is_file() or binary.stat().st_mtime < src.stat().st_mtime:
-        Path(work).mkdir(parents=True, exist_ok=True)
-        subprocess.run(['swiftc', '-O', str(src), '-o', str(binary)], check=True, capture_output=True)
-    return binary
+    """The face detector command for this machine: macOS Vision, or OpenCV YuNet on Windows / Linux (vision_scan.py)."""
+    import vision_scan
+    return vision_scan.people_cmd(work)
 
 
 def grab(path, t):
@@ -59,7 +58,7 @@ def lost_people(source, start_s, duration_s, reference, work, samples=8, min_sco
         p = work/f'frame_{k}.jpg'; cv2.imwrite(str(p), S); rows.append((t, score, box, p))
     if not rows: return []
     found = {}
-    for line in subprocess.check_output([str(detector(work))] + [str(r[3]) for r in rows]).decode().splitlines():
+    for line in subprocess.check_output([*detector(work)] + [str(r[3]) for r in rows]).decode('utf-8').splitlines():
         d = json.loads(line); found[d['path']] = d
     out = []
     for t, score, box, p in rows:

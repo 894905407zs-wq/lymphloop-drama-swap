@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Shot segmentation, labelled contact sheets and reference clips for agent review. Ranges are [in,out) decoded frames."""
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse
 import hashlib
 import json

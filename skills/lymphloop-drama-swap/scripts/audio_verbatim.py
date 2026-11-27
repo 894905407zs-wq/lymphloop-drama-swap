@@ -1,4 +1,5 @@
 """Independent audio-only verbatim check; no expected script supplied and no video generation."""
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 from pathlib import Path
 import argparse,json,subprocess
 import google_api as api,media_pipeline as media

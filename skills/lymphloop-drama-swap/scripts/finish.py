@@ -21,6 +21,7 @@ the background:  nohup $PY scripts/finish.py --run RUN > RUN/logs/finish.log 2>&
     --previous FILE --previous-timeline FILE --previous-label TEXT   an earlier master for the board's version menu
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, subprocess, sys, time
 from pathlib import Path
 

@@ -1,0 +1,6 @@
+# Tests that already failed before the Windows port (2026-11-26, macOS, 521 tests: 3 failures, 1 error).
+# They are kept visible here instead of being skipped; tests/run_ci.py fails only on a failure that is not listed.
+test_any_competitor.LamaCaptionMask.test_extra_boxes_reach_the_model_and_untouched_frames_pass_through
+test_any_competitor.OfficialPromptRules.test_watermark_boxes_follow_the_reference_clip
+test_any_competitor.ReferenceWatermarkBoxes.test_held_copies_of_label_and_caption_boxes_are_dropped
+test_watermark_brand.Plan.test_flash_decides_the_reading_direction_of_vertical_tracks

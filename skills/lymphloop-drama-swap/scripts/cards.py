@@ -23,6 +23,7 @@ person; a card that looks like a celebrity gets refused by the video model's mod
 prepared"): rebuild it from other source frames.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, subprocess, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 

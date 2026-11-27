@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Local, frame-indexed overlay cleanup. OCR proposals require actual overlay review."""
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse,hashlib,json,subprocess,tempfile,shutil,math
 from pathlib import Path
 import media_pipeline as media
@@ -159,6 +160,7 @@ def preflight():
         try:module=__import__(name);result[name]=getattr(module,'__version__',True)
         except ImportError:result[name]=None
     result['swiftc']=shutil.which('swiftc')
+    import vision_scan;result['ocr_engine']=vision_scan.engine()
     result['watermark_tools_ready']=bool(result['cv2'] and result['numpy'])
     return result
 

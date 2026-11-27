@@ -20,6 +20,7 @@ The output is an ordinary scan.json (floating_overlay detections in the fixed bo
 `watermark apply`, `brand` and `final-screen` work unchanged. A film whose picture does not carry this mark (no place
 scores HI anywhere) gets `None` and the caller falls back to the OCR scan.
 """
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import json, subprocess, sys
 from pathlib import Path
 

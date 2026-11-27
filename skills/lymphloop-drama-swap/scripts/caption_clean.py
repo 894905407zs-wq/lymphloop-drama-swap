@@ -16,6 +16,7 @@ Only the reference sent to the generator is cleaned; the source master is untouc
 The CLI defaults (480 short edge, silent output) are legacy; the pipeline does not use them.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, os, subprocess, sys
 from pathlib import Path
 import numpy as np, cv2
@@ -35,22 +36,20 @@ def probe(path):
 
 
 def scanner(work):
-    """The compiled OCR binary, (re)built atomically under a lock. Threads that OCR in parallel (review, select,
-    captions run 4-12 at once) used to rebuild it together whenever the .swift was newer -- after every skill sync --
-    and one ran the half-written file: "scan_text ... returned non-zero exit status 1" (2026-11-20 film 1753, four
-    times, never reproducible by hand)."""
-    import fcntl, os, tempfile
-    binary = Path(work)/'scan_text'
-    src = HERE/'scan_text.swift'
-    if binary.is_file() and binary.stat().st_mtime >= src.stat().st_mtime: return binary
-    Path(work).mkdir(parents=True, exist_ok=True)
-    with open(Path(work)/'.scan_text.lock', 'w') as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
-        if not binary.is_file() or binary.stat().st_mtime < src.stat().st_mtime:
-            tmp = Path(tempfile.mkstemp(dir=work, prefix='.scan_text.')[1])
-            subprocess.run(['swiftc', '-O', str(src), '-o', str(tmp)], check=True, capture_output=True)
-            os.replace(tmp, binary)
-    return binary
+    """The OCR command for this machine as a list (run it as [*argv(scanner(work)), CLIP, OUT_JSON]): the compiled
+    macOS Vision scanner on a Mac, vision_scan.py (RapidOCR) on Windows and Linux. See vision_scan.py."""
+    import vision_scan
+    return vision_scan.text_cmd(work)
+
+
+def argv(cmd):
+    import vision_scan
+    return vision_scan.argv(cmd)
+
+
+def vision_fingerprint(cmd):
+    import vision_scan
+    return vision_scan.fingerprint(cmd)
 
 
 def is_caption(box, width, height):
@@ -104,7 +103,7 @@ def caption_frames(video, work, spoken=None):
     packet print ("yesnap", "6785mg") on a close-up is not mistaken for a caption."""
     work = Path(work); work.mkdir(parents=True, exist_ok=True)
     scan_path = work/(Path(video).stem + '.text.json')
-    subprocess.run([str(scanner(work)), str(Path(video).resolve()), str(scan_path)], check=True, capture_output=True)
+    subprocess.run([*argv(scanner(work)), str(Path(video).resolve()), str(scan_path)], check=True, capture_output=True)
     scan = json.loads(scan_path.read_text())
     words = spoken_words(spoken) if spoken else None
     hits = [d for d in scan['detections'] if is_caption(d['bbox'], scan['width'], scan['height']) and (words is None or spoken_caption(d['text'], words))]
@@ -122,7 +121,7 @@ def _scan(video, work):
     work = Path(work); work.mkdir(parents=True, exist_ok=True)
     scan_path = work/(Path(video).stem + '.text.json')
     if not scan_path.is_file() or scan_path.stat().st_mtime < Path(video).stat().st_mtime:
-        subprocess.run([str(scanner(work)), str(Path(video).resolve()), str(scan_path)], check=True, capture_output=True)
+        subprocess.run([*argv(scanner(work)), str(Path(video).resolve()), str(scan_path)], check=True, capture_output=True)
     return json.loads(scan_path.read_text())
 
 
@@ -150,7 +149,7 @@ def clean(clip, out, work=None, short_edge=480, keep_audio=False, pixels=None, s
     clip, out = Path(clip).resolve(), Path(out).resolve()
     work = Path(work or out.parent/'caption_work').resolve(); work.mkdir(parents=True, exist_ok=True)
     scan_path = work/(clip.stem + '.text.json')
-    subprocess.run([str(scanner(work)), str(clip), str(scan_path)], check=True, capture_output=True)
+    subprocess.run([*argv(scanner(work)), str(clip), str(scan_path)], check=True, capture_output=True)
     scan = json.loads(scan_path.read_text())
     if spoken:
         words = spoken_words(spoken)

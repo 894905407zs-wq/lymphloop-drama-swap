@@ -7,6 +7,7 @@ the segment's prompt: the shot sheets show one shot each, this shows the segment
   seg_sheets.py RUN [G01,G02] --generated  -> RUN/frames/G##-out.jpg, the selected (or a1-c1) clip in the same layout
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, math, subprocess
 from fractions import Fraction
 from pathlib import Path

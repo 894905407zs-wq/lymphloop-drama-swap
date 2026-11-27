@@ -18,6 +18,7 @@ Three parts:
     swap_design.py skeleton --run RUN --seg G16 --shots S219,S220 --name S219g   # -> RUN/shots-regen/S219g.txt
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, re, subprocess, sys
 from pathlib import Path
 

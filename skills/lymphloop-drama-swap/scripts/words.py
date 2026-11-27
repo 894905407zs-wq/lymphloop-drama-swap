@@ -10,6 +10,7 @@ check by transcribing the muted reference again. Needs `pip install faster-whisp
 about 480 MB, is downloaded once into the Hugging Face cache).
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, re, subprocess, sys
 from fractions import Fraction
 from pathlib import Path

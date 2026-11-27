@@ -13,6 +13,7 @@ to them) are inpainted, and frames in the range without any such pixels are left
 safe; ink inpaints only grey or dark printing on a light, unsaturated surface inside the box (old brand text left on
 a card or a paper label), leaving skin and the surface edges alone; none inpaints the whole box.
 """
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, json, subprocess, sys, os
 from pathlib import Path
 import numpy as np, cv2

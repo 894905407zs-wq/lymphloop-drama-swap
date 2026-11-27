@@ -5,6 +5,7 @@ State lives in RUN/state.json. Every command is idempotent and resumable; nothin
 looks at pictures for you — the agent reads the contact sheets this produces.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse, contextlib, hashlib, json, math, os, re, shutil, subprocess, sys, time
 from pathlib import Path
 
@@ -260,10 +261,8 @@ def cmd_watermark(a):
             # External OCR (scan_watermark.swift or any tool) already produced detections.
             data = read(a.scan_json)
         else:
-            binary = wdir/'scan_watermark'
-            swift = HERE/'scan_watermark.swift'
-            if not binary.is_file() or binary.stat().st_mtime < swift.stat().st_mtime:
-                subprocess.run(['swiftc', '-O', str(swift), '-o', str(binary)], check=True)
+            import vision_scan
+            binary = vision_scan.watermark_cmd(wdir)       # macOS Vision, or RapidOCR on Windows / Linux
             # Every 4th frame in 4 processes, then every frame around each hit (user 2026-11-19: one process on every
             # frame took 15 min for a 10-minute film; a floating mark stays on screen for seconds and fades are padded).
             data = wb.fast_scan(binary, source, wdir/'scan_parts', sha(source), pattern, target, int(info['frame_count']))
@@ -3224,9 +3223,8 @@ def watermark_left(video, work, target='LYMPHORIA', ranges=None, places=None):
         save(Path(work)/'left.json', {'type': 'lymphloop_watermark_left', 'video': str(video), 'detections': dets,
                                       'coverage': pos['coverage'], 'places': places})
         return sorted({d['frame'] for d in dets}), None
-    binary = work/'scan_watermark'; swift = HERE/'scan_watermark.swift'
-    if not binary.is_file() or binary.stat().st_mtime < swift.stat().st_mtime:
-        subprocess.run(['swiftc', '-O', str(swift), '-o', str(binary)], check=True, capture_output=True)
+    import vision_scan
+    binary = vision_scan.watermark_cmd(work)
     n = int(media.probe(str(video), include_frames=True)['frame_count'])
     full = wb.fast_scan(binary, video, work/'scan_parts', sha(video), pattern, target, n, ranges=ranges)
     dets = [{'frame': d['frame'], 'bbox': wb.with_icon(d), 'text': d['text'], 'pass': 'final_full'} for d in full['detections'] if wb.is_watermark_text(d['text'])]
@@ -3641,18 +3639,17 @@ def shared_stage(a):
 
 @contextlib.contextmanager
 def flock(path, shared, wait, what):
-    import fcntl
     path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, 'a+b') as f:
         deadline = time.monotonic() + max(0.0, float(wait or 0))
         while True:
             try:
-                fcntl.flock(f.fileno(), (fcntl.LOCK_SH if shared else fcntl.LOCK_EX) | fcntl.LOCK_NB); break
+                oscompat.lock_file(f, exclusive=not shared, blocking=False); break
             except OSError:
                 if time.monotonic() >= deadline: raise api.AdapterError(f'Another worker owns {what}') from None
                 time.sleep(0.5)
         try: yield
-        finally: fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        finally: oscompat.unlock_file(f)
 
 
 def lock_needed(a):

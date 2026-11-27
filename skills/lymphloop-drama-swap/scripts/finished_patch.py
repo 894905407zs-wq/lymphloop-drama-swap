@@ -7,6 +7,7 @@ content reuse at original speed, never a claim of byte-identical tail copying.
 """
 from __future__ import annotations
 
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse
 from fractions import Fraction
 import json

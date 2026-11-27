@@ -12,6 +12,7 @@ softgels, gummies and powders; plain tablets are handled like hard capsules, and
 small bottle like drops (Nuflos run, 2026-11-11). Topical products and devices are out of scope.
 """
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse
 import json
 import re

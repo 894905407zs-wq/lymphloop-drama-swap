@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Gemini 3.8 Flash as a recall-biased per-shot screener and a second-opinion QA reviewer. Cached, JSON-only."""
 from __future__ import annotations
+import oscompat  # noqa: E402,F401  (first import: UTF-8 mode on Windows, see oscompat.py)
 import argparse
 import json
 import sys
