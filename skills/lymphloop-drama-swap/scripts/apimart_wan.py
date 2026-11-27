@@ -128,7 +128,7 @@ def _upload_image_locked(key, path, cache_file):
     cache = api.read(cache_file) if Path(cache_file).is_file() else {}
     hit = cache.get(desc['sha256'])
     if hit and hit.get('expires_unix', 0) > time.time() + 3 * 3600: return hit['url']
-    boundary = 'LL' + secrets.token_hex(16); ext = mimetypes.guess_extension(desc['mime_type']) or '.png'
+    boundary = 'LL' + secrets.token_hex(16); ext = oscompat.mime_extension(desc['mime_type']) or '.png'
     body = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="ref{ext}"\r\nContent-Type: {desc["mime_type"]}\r\n\r\n').encode() \
         + Path(desc['path']).read_bytes() + f'\r\n--{boundary}--\r\n'.encode()
     r = call(key, '/uploads/images', body=body, headers={'Content-Type': 'multipart/form-data; boundary=' + boundary})

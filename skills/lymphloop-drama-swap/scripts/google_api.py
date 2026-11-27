@@ -80,7 +80,7 @@ def save(path, obj):
         f.flush()
         os.fsync(f.fileno())
     os.chmod(temp, 0o600)
-    os.replace(temp, path)
+    oscompat.replace(temp, path)
 
 
 def read(path):
@@ -252,7 +252,7 @@ def file_description(path):
     p = Path(path).expanduser().resolve()
     if not p.is_file():
         raise AdapterError(f"Missing input file: {p}")
-    mime = mimetypes.guess_type(p.name)[0]
+    mime = oscompat.mime_type(p.name)
     if not mime:
         raise AdapterError(f"Unknown media MIME type: {p.suffix}")
     return {"path": str(p), "sha256": file_sha(p), "bytes": p.stat().st_size, "mime_type": mime}
@@ -431,7 +431,7 @@ def atomic_bytes(path, raw):
     tmp = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp")
     with tmp.open("wb") as f:
         f.write(raw); f.flush(); os.fsync(f.fileno())
-    os.replace(tmp, path)
+    oscompat.replace(tmp, path)
 
 
 def copy_result(state, output):

@@ -99,7 +99,7 @@ class RecutCutsStillFrames(unittest.TestCase):
         self.assertEqual(finish.STEPS[:2], ['retrim', 'captions'])
         a = mock.Mock(previous=None, previous_timeline=None, previous_label=None, full=False, user_approved_cut=None)
         cmd = finish.step_cmd('retrim', a, Path('/r'))
-        self.assertEqual(cmd[-4:], ['retrim', '--run', '/r', '--all'])
+        self.assertEqual(cmd[-4:], ['retrim', '--run', str(Path('/r')), '--all'])
 
     def test_recut_names_the_segments_with_still_frames(self):
         import shot_regen as sr

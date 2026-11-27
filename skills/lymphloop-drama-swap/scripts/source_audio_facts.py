@@ -30,7 +30,7 @@ def main():
   t=api.Transport(api.required_key());part=api.media_part(wav,r/'google',t)
   payload={'contents':[{'role':'user','parts':[{'text':PROMPT},part]}],'generationConfig':{'temperature':0,'responseMimeType':'application/json','responseSchema':SCHEMA}}
   resp=t.json(api.API+'/v1beta/models/'+MODEL+':generateContent',method='POST',payload=payload,timeout=180)
-  text='\n'.join(p.get('text','')for c in resp.get('candidates',[])for p in c.get('content',{}).get('parts',[])if not p.get('thought'));facts=json.loads(text);record={'key':key,'facts':facts,'usage_metadata':resp.get('usageMetadata'),'cost_usd':None,'audio_sha256':api.file_sha(wav)};tmp=dest.with_suffix('.tmp');tmp.write_text(json.dumps(record,ensure_ascii=False,indent=2));tmp.replace(dest);return s['id'],facts
+  text='\n'.join(p.get('text','')for c in resp.get('candidates',[])for p in c.get('content',{}).get('parts',[])if not p.get('thought'));facts=json.loads(text);record={'key':key,'facts':facts,'usage_metadata':resp.get('usageMetadata'),'cost_usd':None,'audio_sha256':api.file_sha(wav)};tmp=dest.with_suffix('.tmp');tmp.write_text(json.dumps(record,ensure_ascii=False,indent=2));oscompat.replace(tmp, dest);return s['id'],facts
  with concurrent.futures.ThreadPoolExecutor(8)as ex:result=dict(ex.map(one,plan['segments']))
  (out/'summary.json').write_text(json.dumps(result,ensure_ascii=False,indent=2));print(json.dumps(result,ensure_ascii=False,indent=2))
 if __name__=='__main__':main()

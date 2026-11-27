@@ -86,6 +86,43 @@ class Locks(unittest.TestCase):
             p.wait(timeout=20); p.stdout.close()
 
 
+class Files(unittest.TestCase):
+    def test_replace_wins_while_readers_and_writers_hold_the_target(self):
+        import json, threading
+        with tempfile.TemporaryDirectory() as d:
+            target = Path(d)/'state.json'; target.write_text('{"n": -1}'); errors = []; stop = threading.Event()
+            def write(n):
+                try:
+                    for i in range(40):
+                        tmp = Path(d)/f'.{n}.{i}.tmp'; tmp.write_text(json.dumps({'n': n, 'i': i})); oscompat.replace(tmp, target)
+                except Exception as e: errors.append(e)
+            def read():
+                while not stop.is_set():
+                    try: json.loads(target.read_text())
+                    except PermissionError: pass          # Windows: the file is being swapped right now
+                    except Exception as e: errors.append(e); return
+            readers = [threading.Thread(target=read) for _ in range(3)]; writers = [threading.Thread(target=write, args=(n,)) for n in range(6)]
+            [t.start() for t in readers + writers]; [t.join() for t in writers]; stop.set(); [t.join() for t in readers]
+            self.assertEqual(errors, [])
+            self.assertEqual(sorted(p.name for p in Path(d).iterdir()), ['state.json'])
+
+    def test_change_time_moves_when_a_file_is_rewritten_with_its_old_mtime(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d)/'movie.mp4'; f.write_bytes(b'old'); s = f.stat(); before = oscompat.change_ns(f, s)
+            self.assertEqual(oscompat.change_ns(f), before)
+            time.sleep(0.05); f.write_bytes(b'new'); os.utime(f, ns=(s.st_atime_ns, s.st_mtime_ns))
+            self.assertEqual(f.stat().st_mtime_ns, s.st_mtime_ns)
+            self.assertNotEqual(oscompat.change_ns(f), before)
+
+
+class MediaTypes(unittest.TestCase):
+    def test_media_types_do_not_depend_on_the_registry(self):
+        for name, mime in (('a.mp4', 'video/mp4'), ('B.WEBP', 'image/webp'), ('c.jpeg', 'image/jpeg'), ('d.png', 'image/png'), ('e.wav', 'audio/wav')):
+            self.assertEqual(oscompat.mime_type(name), mime)
+        self.assertEqual(oscompat.mime_type(Path('x')/'clip.mp4'), 'video/mp4'); self.assertIsNone(oscompat.mime_type('noext'))
+        self.assertEqual(oscompat.mime_extension('image/jpeg'), '.jpg'); self.assertEqual(oscompat.mime_extension('image/png'), '.png')
+
+
 class Processes(unittest.TestCase):
     def test_pid_alive(self):
         self.assertTrue(oscompat.pid_alive(os.getpid()))

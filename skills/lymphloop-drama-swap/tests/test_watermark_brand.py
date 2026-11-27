@@ -175,9 +175,9 @@ class FinalScreenNeedsBrand(unittest.TestCase):
             state = {'stages': {'recut': {'master': {'path': '/out/master.mp4', 'sha256': 'aaa'}}}}
             with self.assertRaisesRegex(SystemExit, 'run swap.py brand'): swap.screened_master(state, run)
             state['stages']['brand'] = {'unbranded': {'sha256': 'aaa'}, 'master': {'path': '/out/master.mp4', 'sha256': 'bbb'}}
-            self.assertEqual(str(swap.screened_master(state, run)), '/out/master.mp4')
+            self.assertEqual(str(swap.screened_master(state, run)), str(Path('/out/master.mp4')))
             (run/'watermark/scan.json').write_text(json.dumps({'detections': []})); del state['stages']['brand']
-            self.assertEqual(str(swap.screened_master(state, run)), '/out/master.mp4')
+            self.assertEqual(str(swap.screened_master(state, run)), str(Path('/out/master.mp4')))
 
     def test_fade_pad_is_0_8_seconds_whatever_the_frame_rate(self):
         import swap

@@ -52,6 +52,14 @@ if WINDOWS:
     _k32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
     _k32.GetExitCodeProcess.restype = wintypes.BOOL
     _k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    _k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    _k32.CreateFileW.restype = wintypes.HANDLE
+    _k32.GetFileInformationByHandleEx.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+    _k32.GetFileInformationByHandleEx.restype = wintypes.BOOL
+
+    class _FileBasicInfo(ctypes.Structure):
+        _fields_ = [('CreationTime', ctypes.c_longlong), ('LastAccessTime', ctypes.c_longlong), ('LastWriteTime', ctypes.c_longlong),
+                    ('ChangeTime', ctypes.c_longlong), ('FileAttributes', wintypes.DWORD)]
     _LOCK_EXCLUSIVE, _LOCK_FAIL_NOW = 0x2, 0x1
 
     def _region():
@@ -112,6 +120,59 @@ def locked(path, exclusive=True, wait=None, poll=0.5):
                     time.sleep(poll)
         try: yield f
         finally: unlock_file(f)
+
+
+# ---------------------------------------------------------------- files
+def replace(src, dst, wait=5.0):
+    """os.replace that also works while another thread or process has the target open for a moment. POSIX renames
+    over an open file; Windows refuses with PermissionError until the other handle is closed (two workers saving
+    the same state file, a reader in the middle of read_text), so there the rename is retried for up to `wait` s."""
+    if not WINDOWS: return os.replace(src, dst)
+    deadline = time.monotonic() + wait; pause = 0.005
+    while True:
+        try: return os.replace(src, dst)
+        except PermissionError:
+            if time.monotonic() >= deadline: raise
+            time.sleep(pause); pause = min(0.1, pause * 2)
+
+
+def change_ns(path, stat=None):
+    """When the file's content or metadata last changed, in ns: st_ctime on POSIX. On Windows st_ctime is the
+    creation time, which a rewrite leaves alone, so NTFS's own change time is read instead (a file rewritten with
+    the same size and its old mtime restored is still seen as changed)."""
+    stat = stat or os.stat(path)
+    if not WINDOWS: return stat.st_ctime_ns
+    try:
+        h = _k32.CreateFileW(str(path), 0x80, 0x7, None, 3, 0x02000000, None)     # FILE_READ_ATTRIBUTES, share all, OPEN_EXISTING, BACKUP_SEMANTICS
+        if h in (None, 0, wintypes.HANDLE(-1).value): return stat.st_mtime_ns
+        try:
+            info = _FileBasicInfo()
+            if _k32.GetFileInformationByHandleEx(h, 0, ctypes.byref(info), ctypes.sizeof(info)): return int(info.ChangeTime) * 100
+        finally: _k32.CloseHandle(h)
+    except Exception: pass
+    return stat.st_mtime_ns
+
+
+# Media types by extension. The stdlib table is filled from the registry on Windows, where .webp can be missing and
+# image/jpeg can map to .jfif; the types the skill sends to an API or serves to one are fixed here.
+MIME = {'.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm', '.mkv': 'video/x-matroska',
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.heic': 'image/heic',
+        '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.flac': 'audio/flac', '.ogg': 'audio/ogg',
+        '.json': 'application/json', '.html': 'text/html', '.txt': 'text/plain', '.srt': 'text/plain', '.vtt': 'text/vtt'}
+EXTENSION = {'video/mp4': '.mp4', 'video/quicktime': '.mov', 'video/webm': '.webm', 'image/jpeg': '.jpg', 'image/png': '.png',
+             'image/webp': '.webp', 'image/gif': '.gif', 'audio/wav': '.wav', 'audio/x-wav': '.wav', 'audio/mpeg': '.mp3', 'audio/mp4': '.m4a'}
+
+
+def mime_type(name):
+    """Media type of a file name, the same on every OS (None when unknown)."""
+    import mimetypes
+    return MIME.get(Path(str(name)).suffix.lower()) or mimetypes.guess_type(str(name))[0]
+
+
+def mime_extension(mime):
+    """'.jpg' for 'image/jpeg' etc. (None when unknown)."""
+    import mimetypes
+    return EXTENSION.get(str(mime).lower()) or mimetypes.guess_extension(str(mime))
 
 
 # ---------------------------------------------------------------- processes and tools

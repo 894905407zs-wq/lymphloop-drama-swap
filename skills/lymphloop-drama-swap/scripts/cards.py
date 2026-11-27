@@ -142,7 +142,7 @@ def _build_x100(run: Path, chars: dict, only: set, force: bool):
             L = read(led) if led.is_file() else {'card': cid, 'versions': []}
             if png.is_file():
                 v = len(L['versions']); png.rename(cards_dir(run)/f'{cid}_v{v}.png')
-            tmp.replace(png)
+            oscompat.replace(tmp, png)
             L['versions'].append({'at': time.strftime('%Y-%m-%dT%H:%M:%S'), 'provider': 'x100', 'model': model,
                                   'task_id': tid, 'cost_credits': entry.get('credits_charged', entry.get('credits')),
                                   'srcs': [str(s) for s in srcs], 'prompt': prompt})

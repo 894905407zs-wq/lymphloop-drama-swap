@@ -103,7 +103,7 @@ def _probe_json(path, flags):
     source = Path(path).resolve(); decoder = Path(binary('ffprobe'))
     def identity(p):
         s = p.stat()
-        return [str(p), s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns]
+        return [str(p), s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, oscompat.change_ns(p, s)]
     stamp = [identity(source), identity(decoder), list(flags), 1]
     key = hashlib.sha256(json.dumps(stamp).encode()).hexdigest()
     root = Path(os.environ.get('LYMPHLOOP_PROBE_CACHE', str(Path.home()/'.cache/lymphloop-media-probe')))
@@ -121,7 +121,7 @@ def _probe_json(path, flags):
             root.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile('w', dir=root, prefix=key+'.', suffix='.tmp', delete=False) as f:
                 tmp = Path(f.name); json.dump({'identity': stamp, 'result': result}, f)
-            os.replace(tmp, cache)
+            oscompat.replace(tmp, cache)
         except OSError:
             pass
         finally:
@@ -272,7 +272,7 @@ def extract(source, directory, start, end, step=1):
         if not tmp.exists():
             raise RuntimeError(f'Missing extracted source frame {f}')
         target = dest / f'F{f:09d}.png'
-        tmp.replace(target)
+        oscompat.replace(tmp, target)
         rows.append({'source_frame': f, 'pts': info['frame_pts'][f],
                      'timecode': frame_to_tc(f, info['fps']), 'path': str(target.resolve())})
     record = {'source': str(Path(source).resolve()), 'fps': info['fps'], 'range': [start, end],

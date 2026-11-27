@@ -212,7 +212,7 @@ def _download_atomic(x, url: str, out: Path):
     tmp = out.parent / f'.{out.stem}.{uuid.uuid4().hex[:8]}.tmp{out.suffix}'
     try:
         x.download(url, tmp)
-        tmp.replace(out)
+        oscompat.replace(tmp, out)
     finally:
         if tmp.exists():
             try:

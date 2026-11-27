@@ -65,8 +65,8 @@ def repair(run, recheck=False, segments=None):
         flush();enc.stdin.close();enc.wait();cap.release();orig.release();assert enc.returncode==0 and n==scan['frame_count']
         if touched:
             archive=src.with_name(src.stem+'.before-backplate.mp4')
-            if not archive.exists():os.replace(src,archive)
-            os.replace(tmp,src);m['encodes']=m.get('encodes',1)+1
+            if not archive.exists():oscompat.replace(src,archive)
+            oscompat.replace(tmp,src);m['encodes']=m.get('encodes',1)+1
         else:tmp.unlink()
         mark={'segment':gid,'method':'reviewed_caption_backplate_only_lama','color_filter':'HSV yellow AND B<=190,G>=205,R>=225; native source caption band and OCR anchor required','review_sha256':swap.sha(run/'plan/reference_highlight_review.json'),'input_sha256':before,'output_sha256':swap.sha(src),'frames':n,'frames_repaired':len(touched),'regions':touched}
         if m.get('caption_backplate_repair'):m.setdefault('caption_backplate_repair_history',[]).append(m['caption_backplate_repair'])

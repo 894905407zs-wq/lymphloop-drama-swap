@@ -56,7 +56,7 @@ def _compiled(work, name):
         if not binary.is_file() or binary.stat().st_mtime < src.stat().st_mtime:
             fd, tmp = tempfile.mkstemp(dir=work, prefix=f'.{name}.'); os.close(fd)
             subprocess.run(['swiftc', '-O', str(src), '-o', tmp], check=True, capture_output=True)
-            os.replace(tmp, binary)
+            oscompat.replace(tmp, binary)
     return binary
 
 
@@ -161,7 +161,7 @@ def read_lines(img):
 def write_json(path, record, pretty=False):
     path = Path(path); tmp = path.with_name(f'.{path.name}.{os.getpid()}.tmp')
     tmp.write_text(json.dumps(record, ensure_ascii=False, sort_keys=True, indent=2 if pretty else None), encoding='utf-8')
-    os.replace(tmp, path)
+    oscompat.replace(tmp, path)
 
 
 def scan_text(source, out_json):
@@ -248,7 +248,7 @@ def yunet_model():
         got = hashlib.sha256(part.read_bytes()).hexdigest()
         if got != YUNET_SHA256:
             part.unlink(); fail(f'face model checksum mismatch: {got}')
-        os.replace(part, p)
+        oscompat.replace(part, p)
     return p
 
 

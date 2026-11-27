@@ -121,7 +121,9 @@ class ScreenTests(unittest.TestCase):
 
     def test_probe_only_is_offline(self):
         out = subprocess.run([sys.executable, str(Path(fs.__file__)), 'probe-only'], capture_output=True, text=True,
-                             env={'PATH': '/usr/bin:/bin', 'GEMINI_API_KEY': '', **{k: os.environ[k] for k in ('SYSTEMROOT', 'PYTHONUTF8') if k in os.environ}})
+                             env={'PATH': '/usr/bin:/bin', 'GEMINI_API_KEY': '',
+                                  # what Python itself needs on Windows (system folder, home folder) ; no key
+                                  **{k: os.environ[k] for k in ('SYSTEMROOT', 'PYTHONUTF8', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'LOCALAPPDATA', 'APPDATA', 'TEMP', 'TMP') if k in os.environ}})
         self.assertEqual(out.returncode, 0, out.stderr)
         doc = json.loads(out.stdout)
         self.assertFalse(doc['network']); self.assertEqual(doc['model'], 'gemini-3.8-flash'); self.assertIn('lymphloop', doc['screen_prompt'].lower()); self.assertIn('unsure', doc['screen_prompt'])

@@ -89,7 +89,7 @@ def _read_state():
 
 
 def _write_state(**kw):
-    s = {**_read_state(), **kw}; tmp = STATE.with_name(f'.state.{os.getpid()}.{secrets.token_hex(4)}.tmp'); tmp.write_text(json.dumps(s, indent=1)); tmp.replace(STATE)
+    s = {**_read_state(), **kw}; tmp = STATE.with_name(f'.state.{os.getpid()}.{secrets.token_hex(4)}.tmp'); tmp.write_text(json.dumps(s, indent=1)); oscompat.replace(tmp, STATE)
 
 
 def _alive(pid):
@@ -172,7 +172,7 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
         if start >= size or start > end:
             f.close(); self.send_response(416); self.send_header('Content-Range', f'bytes */{size}'); self.send_header('Content-Length', '0'); self.end_headers(); return None
         self.send_response(206)
-        self.send_header('Content-Type', mimetypes.guess_type(path)[0] or 'application/octet-stream')
+        self.send_header('Content-Type', oscompat.mime_type(path) or 'application/octet-stream')
         self.send_header('Content-Range', f'bytes {start}-{end}/{size}'); self.send_header('Content-Length', str(end - start + 1))
         self.send_header('Last-Modified', email.utils.formatdate(os.fstat(f.fileno()).st_mtime, usegmt=True))
         self.end_headers(); f.seek(start); self._range = end - start + 1
@@ -347,7 +347,7 @@ def publish(path, verify=True):
     dest = WWW/digest/name
     if not dest.is_file():
         dest.parent.mkdir(parents=True, exist_ok=True); tmp = dest.with_name('.' + name + '.' + secrets.token_hex(4))
-        shutil.copyfile(src, tmp); tmp.replace(dest)
+        shutil.copyfile(src, tmp); oscompat.replace(tmp, dest)
     os.utime(dest.parent)   # keep it alive another 48 h
     custom_base = os.environ.get('LYMPHLOOP_PUBLIC_BASE')
     if custom_base:
@@ -432,7 +432,7 @@ def _gate_read():
 
 
 def _gate_write(slots):
-    tmp = GATE_DIR/f'.gate.{os.getpid()}.{secrets.token_hex(4)}.tmp'; tmp.write_text(json.dumps(slots, indent=1)); tmp.replace(GATE_DIR/'gate.json')
+    tmp = GATE_DIR/f'.gate.{os.getpid()}.{secrets.token_hex(4)}.tmp'; tmp.write_text(json.dumps(slots, indent=1)); oscompat.replace(tmp, GATE_DIR/'gate.json')
 
 
 _ACCESS_LINE = re.compile(r'^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) GET (\S+) range=\S+ from=(\d+) sent=(\d+)')

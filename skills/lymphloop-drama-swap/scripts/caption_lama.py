@@ -259,7 +259,7 @@ def _cache_put(key, bgr, cm):
         ok, buf = cv2.imencode('.png', keep, [cv2.IMWRITE_PNG_COMPRESSION, 3])
         if not ok: return
         tmp = p.with_name(f'.{p.name}.{os.getpid()}.{threading.get_ident()}.part')
-        tmp.write_bytes(buf.tobytes()); os.replace(tmp, p)        # atomic: parallel runs never read half a file
+        tmp.write_bytes(buf.tobytes()); oscompat.replace(tmp, p)        # atomic: parallel runs never read half a file
     except OSError:
         return
     if not _pruned:

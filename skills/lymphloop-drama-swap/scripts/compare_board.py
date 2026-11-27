@@ -580,7 +580,7 @@ def _make_range_handler(roots, index_html=None):
                 self.send_error(404, 'Not found')
                 return
             size = target.stat().st_size
-            ctype, _ = mimetypes.guess_type(str(target))
+            ctype = oscompat.mime_type(target)
             ctype = ctype or 'application/octet-stream'
             if ctype == 'text/html':
                 ctype = 'text/html; charset=utf-8'

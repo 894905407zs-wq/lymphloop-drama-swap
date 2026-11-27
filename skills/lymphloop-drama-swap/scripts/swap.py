@@ -2408,7 +2408,7 @@ def cmd_captions(a):
             if rec is None or not rec.get('frames_copied'):
                 if out.is_file(): out.unlink()
                 return gid, 'no lines in this segment'
-            os.replace(out, final); out = final
+            oscompat.replace(out, final); out = final
             s['media_uncaptioned'] = ref(base); s['media'] = ref(out); s['captions'] = {'style': str(style_path), **rec}
             return gid, {'captions': [x['text'] for x in rec['events']], 'method': rec['method']}
         n_cap, n_all, _ = caption_clean.caption_frames(base, run/'qa'/'caption_scan', spoken)
@@ -2438,7 +2438,7 @@ def cmd_captions(a):
             if not caps: return gid, 'nothing was heard in the selected clip'
             rec = cb.burn(base, out, caps, style, centre_y=(style.get('centre_y_by_segment') or {}).get(gid)); rec['method'] = 'drawn in the measured style'
             if fallback_note: rec['fallback'] = fallback_note
-        os.replace(out, final); out = final
+        oscompat.replace(out, final); out = final
         s['media_uncaptioned'] = ref(base); s['media'] = ref(out)
         s['captions'] = {'style': str(style_path), 'events': caps, 'heard': ' '.join(h['w'] for h in heard), 'in_prompt_but_not_said': unheard, **rec}
         # only what is on screen: lines drawn new, or every caption when drawn in the measured style (copied events keep the
@@ -2742,7 +2742,7 @@ def cmd_splice(a):
               '-pix_fmt', 'yuv420p', '-frames:v', str(total), '-c:a', 'aac', '-b:a', '256k', '-t', f'{dur:.6f}', '-movflags', '+faststart', str(tmp)])
     got = media.probe(str(tmp), include_frames=True)
     if got['frame_count'] != total: tmp.unlink(); raise SystemExit(f'splice produced {got["frame_count"]} frames, expected {total}')
-    tmp.replace(out)
+    oscompat.replace(tmp, out)
     ledger = {'type': 'apimart_job_ledger', 'provider': 'local_splice', 'job_id': job_id, 'job': {'job_id': job_id, 'model': 'local_splice', 'segment': a.segment},
               'note': a.note, 'created_at': api.utc(),
               'recipe': {'pictures': [{'source': pc['source'], 'path': str(pc['path']), 'sha256': sha(pc['path']), 'frames_inclusive': pc['frames'],
@@ -3187,7 +3187,7 @@ def cmd_brand(a):
     # again; the rest go in as recut encoded them. Older recuts (no per-atom files) stamp the whole film as before.
     if wb.atoms_usable(timeline): rec = wb.stamp_atoms(unbranded, timeline, plan, tmp, receipt, run/'recut/brand-atoms')
     else: rec = wb.stamp(unbranded, plan, tmp, receipt)
-    tmp.replace(master)
+    oscompat.replace(tmp, master)
     rec['output']['path'] = str(master); save(receipt, rec)
     commit(run, state, 'brand', unbranded=ref(unbranded), master=ref(master), receipt=ref(receipt), plan=ref(run/'watermark/brand_plan.json'),
            stamped_frames=rec['stamped_frames'], tracks=rec['tracks'], verification=rec['verification'], **({'by_atom': rec['by_atom']} if rec.get('by_atom') else {}))

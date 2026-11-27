@@ -141,7 +141,7 @@ class FinishChain(unittest.TestCase):
         import finish, argparse
         a = argparse.Namespace(full=True, previous='v1.mp4', previous_timeline=None, previous_label='第一版')
         cmd = finish.step_cmd('final-screen', a, Path('/r'))
-        self.assertEqual(cmd[-3:], ['--run', '/r', '--full'])
+        self.assertEqual(cmd[-3:], ['--run', str(Path('/r')), '--full'])
         cmd = finish.step_cmd('board', a, Path('/r'))
         self.assertIn('--previous', cmd); self.assertIn('第一版', cmd); self.assertNotIn('--previous-timeline', cmd)
 

@@ -17,6 +17,6 @@ def main():
    assert report['frames_left_caption']==0,'Title still readable'
    assert media.probe(str(tmp))['frame_count']==report['frames']
    archive=src.with_name(src.stem+'.before-titles.mp4')
-   if not archive.exists():os.replace(src,archive)
-   os.replace(tmp,src);m['output_sha256']=swap.sha(src);m['encodes']=m.get('encodes',1)+1;m['caption_title_repair']={'review_sha256':swap.sha(r/'plan/reference_title_review.json'),'input_sha256':before,'output_sha256':m['output_sha256'],'report':report};swap.save(meta,m);print(gid,'reviewed title removed',report['caption_texts'],'frames',report['frames_cleaned'],flush=True)
+   if not archive.exists():oscompat.replace(src,archive)
+   oscompat.replace(tmp,src);m['output_sha256']=swap.sha(src);m['encodes']=m.get('encodes',1)+1;m['caption_title_repair']={'review_sha256':swap.sha(r/'plan/reference_title_review.json'),'input_sha256':before,'output_sha256':m['output_sha256'],'report':report};swap.save(meta,m);print(gid,'reviewed title removed',report['caption_texts'],'frames',report['frames_cleaned'],flush=True)
 if __name__=='__main__':main()

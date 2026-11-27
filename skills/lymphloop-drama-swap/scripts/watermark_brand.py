@@ -224,7 +224,7 @@ def edge_scan(source, out_json, work=None, step=STEP, ranges=None):
                     time.sleep(2*(attempt+1))
             record = {'key': key, 'clip_sha256': hashlib.sha256(clip.read_bytes()).hexdigest(),
                       'scan_sha256': hashlib.sha256(scan.read_bytes()).hexdigest()}
-            tmp = meta.with_suffix('.tmp'); tmp.write_text(json.dumps(record)); tmp.replace(meta)
+            tmp = meta.with_suffix('.tmp'); tmp.write_text(json.dumps(record)); oscompat.replace(tmp, meta)
         for d in json.loads(scan.read_text())['detections']:
             if not is_watermark_text(d['text']): continue
             # the icon sits on the left of an upright line; a box taller than wide here is vertical text read sideways
@@ -779,7 +779,7 @@ def position_scan(source, places, work, ranges=None, step=SPARSE_STEP, pad=DENSE
             raise RuntimeError(f'Incomplete position OCR {name}: expected {len(picked)} frames, got {actual.get("frame_count")}')
         if not cached:
             record = {'key': key, 'clip_sha256': _sha(clip), 'scan_sha256': _sha(out)}
-            tmp = meta.with_suffix('.tmp'); tmp.write_text(json.dumps(record)); tmp.replace(meta)
+            tmp = meta.with_suffix('.tmp'); tmp.write_text(json.dumps(record)); oscompat.replace(tmp, meta)
         found = []
         for d in actual['detections']:
             if not is_watermark_text(d['text']) or d['frame'] >= len(picked): continue
@@ -910,7 +910,7 @@ def _encode_atom(src, stamps_rel, out, W, H, fps, n):
         enc.stdin.write(buf); i += 1
     dec.wait(); enc.stdin.close(); enc.wait()
     if dec.returncode or enc.returncode or i != n: raise SystemExit(f'brand: stamping atom {src} failed (decoded {i}/{n} frames)')
-    tmp.replace(out)
+    oscompat.replace(tmp, out)
 
 
 def atoms_usable(timeline):

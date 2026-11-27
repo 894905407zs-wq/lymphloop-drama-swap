@@ -47,7 +47,7 @@ def prints(video, cache_dir=None):
                           '-fps_mode', 'passthrough', '-f', 'rawvideo', '-'], capture_output=True, check=True).stdout
     arr = np.frombuffer(raw, np.uint8).reshape(-1, PW * PH).copy()
     if key:
-        key.parent.mkdir(parents=True, exist_ok=True); tmp = key.with_suffix('.part.npy'); np.save(tmp, arr); tmp.replace(key)
+        key.parent.mkdir(parents=True, exist_ok=True); tmp = key.with_suffix('.part.npy'); np.save(tmp, arr); oscompat.replace(tmp, key)
     return arr
 
 

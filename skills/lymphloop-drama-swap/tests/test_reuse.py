@@ -88,7 +88,7 @@ class Films(unittest.TestCase):
         g = plan['reused_segments'][0]
         self.assertEqual((g['id'], g['in_frame'], g['out_frame'], g['reused_from']['segment'], g['reused_from']['offset']), ('G901', 75, 125, 'G01', 25))
         sel = json.loads((target/'plan/selections.json').read_text())['G901']
-        self.assertTrue(sel['media']['path'].endswith('target/generation/results/G901-a1-c1.captioned.mp4'))
+        self.assertTrue(Path(sel['media']['path']).as_posix().endswith('target/generation/results/G901-a1-c1.captioned.mp4'))
         self.assertTrue(sel['media_uncaptioned']['path'].endswith('G901-a1-c1.mp4'))
         self.assertEqual((sel['clip_in'], sel['clip_out'], sel['defects'], sel['captions']['method']), (0.0, 2.0, ['品牌名轻微近音'], 'copied from the film'))
         led = json.loads((target/'generation/jobs/G901-a1.json').read_text())
