@@ -1,66 +1,64 @@
-# 规则、守则、固定事实、并行、交付：完整原文
+# 规则、守则、固定事实、并行、交付：完整说明
 
-`SKILL.md` 里这几节只留了摘要（Antigravity 读文件一次最多 46 KB，2026-11-27 压短）。这里是压短前的完整原文，一字未改，
-含每条规则的来由、实测数据和用户原话。摘要和这里有出入时以这里为准；新增的细节写在这里，不写回 `SKILL.md`。
+本文件是 `SKILL.md` 对应章节的完整细则（均已统一到 **Antigravity 原生零 Gemini + 100x `100x-minimax-h3` (`standard` / `768P`) + 五段式 + 人物卡补做** 现行单轨口径，并完整覆盖 macOS 与 Windows / Linux 环境）。
+
+---
 
 ## 不可违反的规则
 
-1. **宁多换不漏换**。第 4 步的节点、第 5 步的逐镜头筛查、看帧板时任一处判"有/拿不准"的镜头都进替换清单；只有亲眼看过帧板并写了 override 才能改回 keep。
-2. **提示词由 Agent 写，审片由 Agent 定**。脚本的自动关只是辅助；不把"API 成功"当"内容合格"。每段先写清楚原片里发生了什么，再写要生成什么。
-3. **物理优先**：每段先判断原片动作在现实里用条包还是盒装做得到，绝不为了迁就原动作让产品弯折、拉长、自己立着或被捏扁；同一场戏里产品形态和位置前后连续；画面里不撕条包。
-3b. **动作设计避开参考片照抄，竞品靠替换句和参考图换掉**（用户 2026-11-14：后期补穿帮太多，要提高一次成功率；2026-11-19：“不能用抹除原片竞品的方式，因为模糊地带会被2.5给照搬回来，甚至抹除到人脸的部分，还会被重塑人物……应该从提示词和参考图下手”）：模型会照抄参考片的姿态、道具和口型。原物离手立着的那一拍条包不离手；提示词里不出现任何勺子；产品不被手整个包住。**参考片只去字幕和水印，竞品原样保留，不抹、不定格替换**（11-19 测试片 6 段抹过的参考片：LaMa 留下糊块、半透明瓶影，框到下巴和手）。每一镜里看得见的每一处竞品都写替换句：`将@视频1中<竞品的颜色、形状、位置、谁拿着>更换为@图片N的<我方产品、状态、比例>`，竞品在做条包做不到的动作（倒、滴、拧、舀）时连动作一起换：`将@视频1中…的动作更换为：…`；替换句之后照常正向写新产品的样子、正面朝镜头和比例句。原片里产品的特殊呈现（手机购物页、整箱产品）给专门的参考图：放在 `RUN/refs/`，`# views:` 写 `run:文件名`（11-19 用户给了我方商品页截图）。`generate` 准备后 Agent 自己看参考片找出每处竞品，核对每处所在镜头那一行都有替换句，缺了就补上（脚本不再自动列出竞品）。竞品品牌名不写进提示词（会被画成字），用外观描述。中远景里偏小的产品改成人物手里一直捏着已开封条包；短段落里反复切镜、产品时有时无的，把同一人物拿产品的镜头裁出来接成一条单独生成，再拆开拼回原位（controlled-edit.md §4.8 第 21、22 类，用户 2026-11-19）。产品只写在参考片原本有竞品的位置，不往原片没有产品的地方加（会凭空显形、变成贴纸）。小而远的镜头和无产品镜头按 [controlled-edit.md §4.8](controlled-edit.md) 处理；后期修补只是兜底。
-3c. **禁止贴图补救生成段**（用户 2026-11-14）：生成出来的画面里有穿帮（产品变形、立着、残留瓶子或勺子、手糊），不许在画面上贴色块 / 色条、贴产品图、跟踪贴片、从别的帧或别的片子抠一块贴进来、局部调色把竞品染成产品色，也不许用 LaMa / inpaint 把画面里的产品或道具抹掉、改画。能做的只有整帧级处理：去掉 0.5 秒以内的闪帧、借同一素材兄弟片的整镜（画面和同期声一起，接在硬切上）、消音或补音；这些都救不了时，写进交付说明并报告用户，由用户决定是否付费重新生成这一段。`region_inpaint.py` 会拒绝在生成段帧范围里用整框填充（gate none）。**也不许用原片画面放大重取景、裁切别段的生成画面去顶替生成镜头，不许自己写 ffmpeg 脚本拼生成段**（11-14 NV0560：G01 车边交接换成原片约 6 倍放大的头部，另一位女士和递条包动作没了；G05 末镜两人宽景换成一人头部放大，等于删了原片内容）：`recut` 只接受账本里登记的生成结果（付费结果、`swap.py splice` 结果）及 `select` / `captions` 自动做的去字幕、加字幕版本；`splice` 只接受本 RUN 的生成结果和原片整帧，别的文件一律拒绝。仍然允许的只有文字类处理：去残留字幕和标题卡（`select` 自动去字幕、`:purple`）、抹道具上的旧品牌字（`:ink`），以及原水印位置盖白色 LYMPHLOOP（`brand`，用户已认可）。没有重新生成的原片画面（去字幕、去水印、原片里残留的小瓶）不在此列。
-3d. **不许删原片内容、不许跳过要换的段**（用户 2026-11-14："codex 会擅自把原片的一些段落给删掉，直接不做，这是不允许的"）：成片里原片的每个镜头、每句台词都要在，要么是原片，要么是换好的生成段。不剪掉镜头或整句来躲开穿帮，不把有竞品的段留着不做，不把选片剪得比原段短（`recut` 拒绝短 0.5 秒以上的选片）。生成段有穿帮就报告用户，由用户决定是否付费重生成；只有用户明确同意删某段时才加 `recut --user-approved-cut G##`。用户最在意的是产品变形和画面穿帮，品牌名念得略偏是小问题。**原片人物照原片生成**（用户 2026-11-14："照原片生成人物"）：卡通人物、骷髅角色、"婴儿身体成年人"这类 AI 造型，都按参考片原样生成，不自行把人物镜头换成静物、不删人（11-14 NV0467 把 30 个人物镜头换成纸盒静物，用户否决）。**参考片也不许把人裁出画**：去竞品时缩放裁切参考片、把人物或这一镜的主体裁掉，模型会换人、换衣服、换场景（11-14 batch6 18 段）；`generate` 提交前用 `ref_framing.py` 检查，原片里的脸被裁出参考画面就拒绝（只有裁掉的是海报、包装上的人像时才加 `--allow-reference-crop G##`）。
-4. **一段最多一次付费生成，结果一律采用**（用户 2026-11-11："每段实际付费只能一次"）。审片不过不重做。没有产生付费结果的尝试（任务失败已全额退款、提交时被拒且未扣费、参考片没发布出去）由脚本自动用同样输入重提，每段最多 3 次，全部记进账本 `unpaid_attempts`；状态不明（超时、断线）可能已被接收扣费，绝不盲目重提，先查 APIMART；401/402/403（密钥、余额）要用户处理。保留账本，优先用整帧级的本地处理（借兄弟片整镜、消音补音、0.5 秒以内的闪帧；不贴图、不删内容，见 3c、3d），其余写进交付说明并报告用户。**唯一的例外是用户在对话里明确要求重生成**（用户 2026-11-19："把失败的镜头重新生成一遍"）：先按 controlled-edit.md §4.8 找出上一次失败的原因（通常是参考片里还看得见竞品），改参考片和提示词，写到 `prompts/G##-a2.txt`（编号跟在已有账本后面，本地拼接占过的号自动跳过），再 `generate --prepare-only --user-approved-regen G## --user-quote "用户原话"` → 看上传帧板 → 只带 `--segment`、`--user-approved-regen`、`--user-quote` 提交（`--mute` 只在准备时给）；用户原话记进任务账本，脚本没有用户原话不接受 a1 以外的编号。 例外（用户 2026-11-20 补充："二次生成如果还有穿帮，继续缩减范围，甚至缩减到单镜头动作继续第三次生成"；用户 2026-11-20："如果首次生成的整段中出现了穿帮，对照原片看穿帮的是那一镜，然后单独针对穿帮的镜头重写提示词生成。"）：审片发现穿帮的那一镜可以按第 10c 步单独补做，还有穿帮再缩到单个动作补做，检查出来的还可以补第三次（同一处最多三次），只重做这一镜、按帧拼回，不整段重生成。
-5. **完整语义分段**：段的切点不切断一句话，不把产品镜头和它所配的那句台词拆开，不跨段落锁边；相邻替换段直接相接。
-6. 送去生成的参考片和生成结果都不带字幕、标题卡、水印或原品牌文字（字幕会把台词和口型绑死，换不成新词）；选片后由 `captions` 在本地按原片字幕的样式和位置把字幕补回生成段，内容只写生成段实际说出来的词（没说出来的词不写）。没有被重新生成的原片镜头保持原样（含其字幕）。
-7. **台词**：整段的台词连口型由模型重新生成，提示词里逐句写出；没有冲突的台词一字不改；冲突只有产品名（任何竞品名）、剂型（drops、capsules、softgels、gummies、powder……）、用量用法和我的产品没有的具体成分（草药数量、泛泛的功效说法不算，见 [controlled-edit.md §2](controlled-edit.md) 第 4 条）；冲突台词只改冲突词，提示词正文里绝不写被替换的旧词；生成片台词要听写回读，不信 QA 字幕。**永远不用 TTS**：对白、旁白、成分改词都由 Seedance 按参考片里的原音色重新生成。有冲突词的段在准备时消音（`generate --prepare-only --mute G##:起-止[,起-止]`，只动音轨）：旁白改词消整句，画内旧词在句中且会留下 0.8 秒以上空白的消整句，品牌名消 "It's called ___" 整个分句，句尾单个替换词只消这个词；提示词写法见 controlled-edit.md §5，窗口怎么定、段尾改词、拼接和空档补音见 workflow.md 附录）。
-8. **费用**。APIMART seedance-2.0 的接口页没有列价目，生成前向用户报段数和总输出秒数；首批任务完成后从账本 `cost_usd`（任务返回的 `cost`）读实付单价，之后按它估算，交付按账本报告实际费用。
-9. 做不到就说做不到：三层识别仍可能漏，终检是兜底不是保证；720p 生成段与原片清晰度可能有落差。
+1. **宁多换不漏换**。第 4 步冲突节点、第 5 步逐镜头筛查、看帧板时任一处判“有/拿不准”的镜头均进入替换清单；只有亲眼看过帧板并写入 `RUN/detect/overrides.json` 才能改回 keep。
+2. **提示词由 Agent 写，审片由 Agent 定**。脚本自动检查只是辅助，绝不把“接口返回成功”等同于“内容合格”。每段写提示词前必须看高清原帧，生成后必须用 `read_file` 直接看并听 `.mp4` 审片。
+3. **物理优先**：每段先按 [controlled-edit.md §4](controlled-edit.md) 判断现实中用条包还是纸盒能自然完成动作，绝不迁就原动作写违背物理的画面（条包不自站立、不弯折拉长、画面里不撕条包、服用一律单手闭唇轻抿）。
+3b. **动作设计避开参考片照抄，统一五段式 + 每镜大小参照**：
+    - 参考片只去字幕和漂浮水印，**原片竞品原样保留，不抹除、不定格替换**（LaMa 抹瓶易留糊块或误伤人脸/手部）。
+    - 提示词一律按 [rules-now.md](rules-now.md) 五段式写：在 `【参考素材职责】` 写“完全移除原片中的<具体竞品>及字幕”和“产品大小不沿用原片被替换容器大小和手部张开幅度”，在 `【事件脚本】` 每镜正向描写我方产品动作与 `大小参照：……`（优先对照人脸、握持的手与近旁实际物件，严禁拿竞品作参照）。
+    - **严禁旧写法**：`prepare` 直接拒绝 `将@视频1中…更换为…`、`这不是视频编辑`、`动作照@视频1 / 照它`、厘米数、勺子词、画面否定句、参数/时间戳进正文。
+    - 手机/电脑屏幕上的竞品购物页按规则 S1 传 `phone_page` / `desktop_page`；小而远、背景旧瓶、多镜反打等高风险动作按 [controlled-edit.md §4.8](controlled-edit.md) 处理。
+3c. **禁止贴图补救生成段**：严禁贴色块/贴产品图/局部抠图跟踪/调色染绿/LaMa 整框抹除生成画面里的产品或道具穿帮；严禁放大裁切生成画面或用原片放大重取景顶替生成镜头；严禁自写 ffmpeg 拼生成段。`region_inpaint.py` 在生成段帧范围拒绝无门控整框填充，仅允许 `:purple`（残留字幕）与 `:ink`（道具旧印刷字）。允许的免费本地手段仅限整帧级处理（裁掉补尾与 ≤0.5 秒坏闪帧、借同素材兄弟片整镜、`select` 自动去残留字幕、补满 3 轮后无嘴镜用同段干净帧放慢填补）。
+3d. **不许删原片内容、不许跳过要换的段**：成片里原片每个镜头与每句台词都必须在，要么是原片，要么是换好的生成段（`recut` 拒绝比原段短超 0.5 秒的选片，除非用户明确同意 `--user-approved-cut` 或通过完整内容逐镜核验 `--content-preserved-review`）。原片人物（含卡通/特效造型）照原片生成；参考片不得把人物裁出画（`ref_framing.py` 自动检查拦截）。
+4. **首轮原片参考每段 1 次 + 穿帮必走人物卡定点补做**：
+    - 首轮（`a1`）每段挂去字幕参考视频生成 1 次。未产生付费结果的失败（失败退款、校验被拒未扣费）由脚本自动重提最多 3 次并记入 `unpaid_attempts`；网络超时/状态不明绝不盲目重提，先查 100x 任务状态。
+    - 审片（6 项 `--audit`、`carton_check.py` 像素量尺、终检闪回帧板与产品帧板）查出八类穿帮时，统一按第 10c 步**一轮一批**走**人物卡模式**定点补做（不挂参考视频，只挂人物卡 + 产品图 + 说话人音色，同一处最多补做 3 轮；第 2 轮范围必须更短，第 3 轮不长于最窄轮）。
+    - 同一处补满 3 轮仍未过时，不卡死流程，照常 `finish` 并写入交付说明交用户一次性裁定（破例第 4 轮 `--again --user-quote "..."` 或无嘴镜本地修复）。
+5. **完整语义分段**：段边界不切断一句话、不拆开产品镜头与对应台词、不跨段落锁边；参考段严格 `< 15` 秒（上限 14.9 秒，非目标）。
+6. **去字幕参考 + 原样复刻字幕**：送生成的参考片和生成结果不带字幕、标题卡、水印或竞品字；选片后由 `captions` 原样复制原片字幕（仅改词句按量出样式仿制重画），未重做的原片镜头保留原字幕。
+7. **台词与音节对齐**：全段听得到的台词逐句以 `{原词}` 写出，未冲突词一字不改；画内可见嘴部改词优先**音节数对齐**（如 4 音节 `Lymphoria` 换 `Yesnap LymphLoop`）；正文绝不出现被换掉的旧词或音标；**永远不用 TTS**；冲突词提交前 `--mute` 消音（旁白/句中 ≥0.8s 空档消整句，品牌名消 `"It's called ___"` 分句，句尾单词可单消）。
+8. **费用透明**：默认走 100x `100x-minimax-h3`（`standard` / `768P` / `9:16`，约 3.89 积分/秒）；生成前向用户报段数与总秒数，交付按账本如实汇报总积分与人物卡费用。
+9. **如实汇报局限**：自动检查是兜底不是绝对保证，768P 生成段与高码率原片画质偶有细微落差，达上限未解的瑕疵如实列新时间码交付。
 
-## Agent 执行守则（2026-10-24 Claude 与 Codex 同批对比实跑后定，Antigravity 照用）
+---
 
-1. **亲自看图**：帧板（`RUN/shots/sheets/`）、生成片帧板（`RUN/qa/`）、拼接前后的对比图，一律用图片查看工具打开亲自看；只看 JSON 或 OCR 结论就选片、判 keep，算违规。每段选片前至少看过一张生成片帧板。
-2. **长步骤放后台**：`watermark scan`、`generate`、`recut`、`final-screen` 可能跑 5–30 分钟（`detect-pro`、`screen` 现在只出拼图和导入结果，几秒就完）。先 `mkdir -p RUN/logs`，再用 `nohup "$PY" scripts/swap.py <步> --run RUN … > RUN/logs/<步>.log 2>&1 &` 后台跑，再用 `tail -n 30 RUN/logs/<步>.log`、`"$PY" scripts/swap.py status --run RUN`、`RUN/generation/jobs/*.json` 查进度。不要让前台命令卡到超时被杀：被杀的提交会在账本里留下 submitting 状态，必须先去 APIMART 查任务再处理，绝不盲目重提（会重复扣费）。
-3. **只动自己的 RUN**：开跑前新建自己的 RUN/OUT 目录；绝不往别人的 RUN 写提示词、提交生成、改 `selections.json` 或回剪。`swap.py` 的写操作带 RUN 锁，碰到"被另一个进程占用"的报错说明有人在用这个 RUN，换自己的目录，不要删锁。
-4. **不杀别人的进程**：要停进程先 `ps -axww | grep -E "swap.py|apimart_wan|hostd"` 看完整命令和 RUN 路径，只停自己启动的。`hostd.py` 是这份 skill 所有 RUN 共享的托管，不要 `stop`；只在托管真正不通（`hostd.py status` 显示不健康）时才用 `hostd.py restart-tunnel` 换隧道，**慢不要重启**（每次重启会打断所有会话正在取片的任务）；不要自己另起隧道、文件服务或第三方上传。提交交给 `swap.py generate`：它经全机取片闸门排队，**不要**自己分批、限并发、绕开 `apimart_wan.run_batch` 写提交脚本。
-5. **按实际时长顺剪，画面和它生成的声音一起用**。整段的台词和口型由模型重新生成、一起出（用户 2026-11-11），提示词里每一句都写出来，不写"原声照原片"。选用的画面带着它自己的声音进出，不拆开；所选段长了，后续画声一起顺延，短了就前移。保持原速，避免为卡原时长补帧、截句或变速。**画面里看得到有人说话的地方，声音只能是同一个文件、同一时刻的自带声音，不论台词改没改**（用户 2026-11-21："这种带有口型同步的替换段，不论有没有改口播，都应该要用生成段自带的音频"）：不自动换原片声音、不把首次生成或别的片段的声音贴到说话的嘴上、不借词。原片声音、首次生成的声音、借来的词只能放在看不到嘴的画面上（旁白、背影、空镜、插入镜头），`splice` 和 `select --sound source` 要求 agent 看过后用 `--no-mouth` 标出这些地方，否则拒绝。生成的声音和它自己的嘴对不上是穿帮，补做那一镜，不靠换声音。
-6. **次数记账**。每个目标段只有 a1 和 c1，最多一次付费结果（用户明确要求重生成的段另开 a2，见规则 4）。未付费的失败由 `apimart_wan` 自动重提（`unpaid_attempts` 记每一次），不要自己写重提脚本；状态不明的提交恢复时只查询原任务或下载结果。本地拼接由 `swap.py splice` 记为 `local_splice`。
-7. **凭据**：密钥只从环境变量或钥匙串读，不打印、不写进日志或提示词；沙箱禁网、禁钥匙串时请用户切到完全访问再跑。
-8. **汇报**：每条视频交付时写清段数、各段用了第几次生成或哪种拼接、总花费、终检结果、已知瑕疵。
-9. **批次里报了母版问题，不要整批停下**（11-22 一个线程报完问题就停住，9 条只交了 3 条）。问题写进维护者记录（复现命令 + 报错原文），其余段和片子照常推进到交付；母版修好后直接续跑原命令。补满三次的穿帮也不停、不问，先当瑕疵交付，最后汇总成一张清单交用户一次裁定。批次经验见 references/rules-now.md 的"批次运行经验"和"上限瑕疵的破例与本地修复"。
+## Agent 执行守则
 
-## 固定事实
+1. **亲自看图听声**：帧板、总览图、上传参考片、生成片 `.mp4`（`read_file` 看动图+听真声）、`carton_check` 对照图、闪回帧板与产品帧板一律亲自看听；只看 JSON 即选片/判 pass 属违规。
+2. **长步骤放后台**：`watermark scan`、`generate`、`recut`、`final-screen`、`finish.py` 放后台运行并留日志，通过 `swap.py status` 和 `RUN/generation/jobs/*.json` 查进度。
+3. **只动自己的 RUN**：每条视频独立建 RUN/OUT 目录；`swap.py` 自带跨平台文件锁（POSIX `flock` / Win32 `LockFileEx`），遇占用提示时等待或用 `--lock-wait`，绝不删锁。
+4. **不误杀其他进程**：禁止无差别 `pkill -f python`；提交统一走 `swap.py generate` 与 `shot_regen.py round submit`，不自写绕过账本的提交脚本。
+5. **按实际时长顺剪，说话镜头只用自己的同期声**：画面看得到人张嘴说话的地方，声音必须是同一文件、同一时刻自带音轨，不论台词改没改；`--sound source` / `splice --audio-window` 仅允许用在无嘴画面并标 `--no-mouth`。口型错位直接补做该镜（`lip_sync`），不做本地贴音或口型对齐。
+6. **次数记账**：首次生成 `a1`、补做 `shots-regen/rounds/`、本地拼接 `local_splice`、未付费重试 `unpaid_attempts`，全量落盘可追溯。
+7. **凭据安全**：密钥/登录态仅从环境变量、系统凭据库或 100x CLI 读取，绝不打印或写进日志/提示词。
+8. **完整汇报**：交付写明成片路径、分辨率/帧率/时长、生成渠道与模型、段数/首轮通过率/补做轮次、总消耗积分/费用、终检结论、已知瑕疵（新时间码）与对比看板访问地址。
+9. **批次不中途停摆**：单段/单条遇异常或补满 3 轮时，记录复现信息或瑕疵明细并继续推进其余段/片子，整批完成后一并汇总交用户裁定。
 
-- **产品**：yesnap LymphLoop，Orange Mango 口味，30 支/盒，每支 8 g 液体条包。青绿色翻盖纸盒（10×7×13 cm 级）+ 青绿色柔性条包（约一根食指长、比拇指指腹略宽，侧边缺口）。**画面里不撕条包**：展示用未开条包（可轻晃），喝的镜头从第一帧就是已开条包闭唇轻抿，一镜到底就中间加硬切（规则见 [controlled-edit.md §4.2](controlled-edit.md) 第 6 条）。`assets/product/profile.json → facts` 是事实来源，[product-actions.md](product-actions.md) 是写提示词前要看的事实、状态链与动作对照。
-- **送模型的产品参考图**（前三张来自真人手持实拍，识别和生成都只用这些和 `RUN/refs/` 里为这条片子做的参考图）：
-  - `handheld_photo`：`assets/product/stick-handheld-scale.jpg`，手持密封条包（展示、抽出、拿着讲话）。
-  - `opened_packet_hand`：`assets/product/opened-packet-handheld.jpg`，手持已开条包（喝、往水里挤、拿着已开条包的镜头用它，2304×4096 原图）。
-  - **纸盒只有两张图，一起给**（用户 2026-11-20："如果是要换纸盒的段落可以用我这套方法，其他关于盒装的参考图都可以移除掉，没什么用了"）：`carton_views` = `assets/product/carton-views.jpg`（同一个纸盒白底九个角度，无手）+ `carton_hand` = `assets/product/carton-hand-scale.jpg`（一只真手拿着纸盒正面，只管纸盒和手的比例、握法）。**换纸盒的段落按 [carton-swap.md](carton-swap.md) 的五段式写**（生成目标 / 参考素材职责 / 主体与关系 / 事件脚本 / 保持一致），用 100x `100x-seedance-2.0` 720P 参考视频生成；测试片 G05、G16 用这套一次成功，之前同样镜头按旧规则失败 3–4 轮。旧的四视图拼图、正面单图、顶面图和 carton-sources 都已移除（备份在 `~/.codex/skills-backup/lymphloop-swap-claude-carton-2026-11-20/`）。**提示词里绝不写"与原瓶大小一致"**（003 G09：纸盒被画成瓶子那样细高）。
-  - **屏幕上的商品页两张**（用户 2026-11-22：“电脑和手机的页面应该都要放在skill里”）：`phone_page` = `assets/product/landing-page-phone.jpg`（手机上的 Yesnap Health 店铺商品页实拍截图）、`desktop_page` = `assets/product/landing-page-desktop.jpg`（电脑浏览器里的商品页截图）。原片手机或电脑屏幕上显示竞品购物页 / 落地页时，整页换成我方商品页（价格不用管）。规则表 S1 自动判；观察没认出来的，在 `detect/overrides.json` 那一镜写 `"screen": "phone"` 或 `"computer"` 再跑 decide。
-  每段先按 [controlled-edit.md §4](controlled-edit.md) 判断现实里该用条包还是盒装、条包开没开，再选图。`assets/physical/` 四段实拍视频只给 Agent 看，不上传。
-- **竞品不限于 Lymphoria**（用户 2026-11-11）：滴剂、硬胶囊、软胶囊、片剂、软糖、粉剂都换。每条视频先 `swap.py competitor`，脚本出 24 格全片总览图、本地听写和声音采样，Agent 看图、听采样后写出本条的竞品档案 `RUN/detect/competitor.json`（品牌、剂型、容器与剂型单元长相、服用方式、难例、漂浮水印文字），核对后 `--accept`；识别、审片、终检和水印扫描都以它为准。外用、器械类不在范围内，`--accept` 会拒绝，先告诉用户。`assets/competitors/` 只是内置的 Lymphoria 锚点图（没有档案的旧 RUN 用），只用于识别，永远不作生成参考。
-- **识别契约** `assets/prompts/detect-conflicts.txt` 是用户原文，SHA 锁定，不改。
-- **生成路线**：每一段（纸盒、条包、只改台词的段、人物卡补做都一样）默认走 **100x 渠道 `100x-minimax-h3`（`standard` / `768P` / `9:16`）** 参考生成（用户 2026-11-26 实测确认并切为默认；画幅固定 `9:16`、分辨率固定 `768P`、线路 `standard`、时长 = 段长向上取整的整数秒 `4–15`，全部走接口参数，提示词里不写；单价约 3.89 积分/秒，参考片直传 100x 不经隧道）。如需临时切回 `100x-seedance-2.0`（`720P`）可设 `LYMPHLOOP_X100_MODEL=100x-seedance-2.0`，如需切回 APIMART `seedance-2.0`（`720p`）可设 `LYMPHLOOP_GEN_CHANNEL=apimart` 或改 `~/.cache/lymphloop-models/local-slots/channel.txt`。100x `seedance-2.5` 无 `9:16` 参数，不用。参考片是去掉字幕和水印的原段，末帧定住补到同样的整数秒；按本 skill 的锁边规则切段，不超过 15 秒。选片时 `select` 会自动检查 H3 末词是否超出原段时长并放宽 `clip_out` 防止截词。详见 [执行细则](workflow.md#9-generate)。
-- **逐段写提示词，一律五段式**（用户 2026-11-20："统一成五段式"；来自用户在 Gemini 里用 clone-seedance-video skill 写、G05/G16 一次成功的提示词，规则见 [rules-now.md](rules-now.md)）：【生成目标】【参考素材职责】【主体与关系】【事件脚本】【保持一致】。`plan` 写出骨架，`swap_design.py decide` 按设计表把形态、图、数量、移除清单和每镜动作填好（只重写没人动过的骨架）；agent 只填【写…】：场景、人物、音色、每阶段的景别机位和终态、台词语气。一个镜头一个阶段，每阶段以“结束时……”收尾；台词写成 `{原词}`，带语气和语言；【事件脚本】只写正向，“完全移除 / 不采用 / 仅”只写在另外几段；正文不写时间戳、秒数、画幅、时长、分辨率（这些全由接口参数定，用户 2026-11-20），也不写镜头号、规则号；每张上传的图在【参考素材职责】里单独一行写职责。`generate --prepare-only` 只收五段式，并核对设计表、阶段数和终态、台词花括号、参数不进正文、否定句、勺子、厘米数，不过就拒绝。
-- **一次成片**（用户 2026-11-11）：每个目标段**最多一次付费生成**，**生成什么都要用**，没有第二次付费。没有产生付费结果的尝试（任务失败已全额退款、提交时被拒且未扣费、参考片没发布出去）由脚本自动用同样输入重提，每段最多 3 次，全部记进账本 `unpaid_attempts`；状态不明（超时、断线）可能已被接收扣费，绝不盲目重提，先查 APIMART；401/402/403（密钥、余额）要用户处理。成功率全靠提交前做对：参考片干净（无字幕、无水印、首尾不带邻镜头的帧）；竞品逐镜头找到每一处并写成目标产品；目标动作按原片手的运动轨迹选；服用一律闭唇轻抿；提示词按官方写法。审片只记录缺陷和做免费的本地处理（裁切、`select` 自动去字幕、拼接、定点修补）。
-- **提交前检查实际上传的参考片**。先用 `generate --prepare-only` 产出准确文件和帧板，亲自看：字幕和水印去干净了、修补处看不出痕迹、首尾没有邻镜头的帧、结尾定住的是本段最后一帧；复听有消音的窗口，再按 controlled-edit.md §7 逐条自查提示词，然后提交该段（付费只此一次）。
-- **凭据**：默认零外部 Gemini 模式无需 `GEMINI_API_KEY`（仅 `LYMPHLOOP_ALLOW_EXTERNAL_GEMINI=1` 时读取）；APIMART 用 `APIMART_API_KEY` 或钥匙串 `codex-seedance-apimart/api-key`（钥匙串条目沿用旧名）；都不出现在日志。
-- **运行环境**：macOS 或 Windows（Linux 同 Windows 的做法）。文字和人脸识别按系统选引擎，输出同一种 JSON，调用方不用区分：macOS 用系统 Vision（三个 `.swift`，首次用时编译），Windows / Linux 用 RapidOCR + OpenCV YuNet（`scripts/vision_scan.py`；`LYMPHLOOP_OCR_ENGINE=rapidocr` 可在 Mac 上也选它）。系统差异（文件锁、进程、字体、Windows 上的 UTF-8）都收在 `scripts/oscompat.py`。Python 3.12 venv 在 `$SKILL/.venv`（numpy、opencv-python-headless、Pillow、faster-whisper、onnxruntime，Windows / Linux 另加 rapidocr）；去字幕用的 LaMa 模型（208 MB）第一次用时自动下载到 `~/.cache/lymphloop-models/`，所有命令用 `$PY=$SKILL/.venv/bin/python` 运行（Windows 是 `$SKILL\.venv\Scripts\python.exe`，文档里其余写法不变）；ffmpeg / ffprobe 找 `$SKILL/bin/` → PATH → `~/.codex/tools/ffmpeg/`，cloudflared 找 `$SKILL/bin/` → `~/.codex/tools/wan-media/2026.10.0/`；公网托管缓存在 `~/.cache/lymphloop-host-claude/`。需要外网（100x 生成接口、首次下载模型；切回 APIMART 渠道时另需 APIMART 和 Cloudflare；默认不连外部 Gemini）和系统凭据库读取权限（macOS 钥匙串；Windows 凭据管理器，或直接用环境变量）。Windows 上人脸模型（232 KB）第一次用时自动下载到同一个模型目录。
-- **首次安装（仓库版）**：`.venv` 和 `bin/` 不随仓库分发。`$SKILL/.venv` 不存在时先建环境：`python3.12 -m venv "$SKILL/.venv" && "$SKILL/.venv/bin/pip" install -r "$SKILL/requirements.txt"`；ffmpeg / ffprobe 装到 PATH 即可，但要带 drawtext 滤镜（烧时间码用；Homebrew 的普通 `ffmpeg` 不带，用 `brew install ffmpeg-full` 并把 `$(brew --prefix ffmpeg-full)/bin` 放进 PATH）；默认 100x 渠道不需要 cloudflared。**Windows**（PowerShell，在 `$SKILL` 目录下）：`py -3.12 -m venv .venv; .venv\Scripts\python.exe -m pip install -r requirements.txt`，ffmpeg 用 `winget install Gyan.FFmpeg`，Node 用 `winget install OpenJS.NodeJS.LTS`；脚本在 Windows 上会自己切到 UTF-8 模式，不用另外设置。装好后 `$PY scripts/oscompat.py` 打印本机情况（系统、编码、字体），`$PY scripts/watermark_cleanup.py preflight` 打印识别引擎。100x 客户端 `scripts/x100.py` 已随包提供，它调用本机安装的 100x MCP 桥（默认 `~/.codex/plugin-sources/100x-mcp/plugins/100x`，可用 `X100_PLUGIN` 指到别处），需要 Node 22+ 和已登录的 100x 账号。
+---
 
-## 并行（用户 2026-10-24 要求；2026-11-19 提速）
+## 固定事实与跨平台环境
 
-- **时长目标**：10 分钟的片子从拿到视频到交付约 2 小时（11-19 测试片原来 4 小时 20 分）。机器步骤能同时跑的都同时跑：第 2、4、5 步一起后台跑；`plan` 后立刻 `generate --refs-only`；审片（`review`）、补字幕（`captions`）、准备时的竞品检查都按段并行。
+- **产品**：yesnap LymphLoop，Orange Mango 口味，30 支/盒，每支 8 g 液体条包。青绿色翻盖纸盒（10×7×13 cm 级，宽正面印 `LYMPHATIC`）+ 青绿色柔性条包（约一根食指长、略宽于拇指指腹）。动作与 7 种合法成分见 [product-actions.md](product-actions.md)。
+- **送模型的参考图**：`handheld_photo`（未开条包）、`opened_packet_hand`（已开条包）、纸盒双图 `carton_views,carton_hand`（必一起传，见 [carton-swap.md](carton-swap.md)）、屏幕商品页 `phone_page` / `desktop_page`（规则 S1）。`assets/physical/` 实拍视频仅给 Agent 看，不上传。
+- **生成路线**：默认 **100x `100x-minimax-h3`（`standard` / `768P` / `9:16`）**，首次参考视频生成与人物卡补做一致，时长取目标段向上取整整数秒（`4–15`），全走请求参数不进正文，参考片与音色音频均直传 100x（不走任何本地隧道）。临时切换：`LYMPHLOOP_X100_MODEL=100x-seedance-2.0`（`720P`）或 `LYMPHLOOP_GEN_CHANNEL=apimart`（APIMART `seedance-2.0` `720p`）；禁用 `100x-seedance-2.5`。选片时 `select` 自动检查 H3 末词是否超出原段时长并放宽 `clip_out` 防止截词。
+- **跨平台运行环境（macOS / Windows / Linux）**：
+  - 视觉引擎按平台自动选择（`scripts/vision_scan.py`）：macOS 用系统 Apple Vision（Swift 扫描器），Windows / Linux 自动用 RapidOCR + OpenCV YuNet（模型首次自动下载到 `~/.cache/lymphloop-models/`；macOS 也可设 `LYMPHLOOP_OCR_ENGINE=rapidocr` 切换），输出同格式 JSON。
+  - 系统差异集中由 `scripts/oscompat.py` 处理（文件锁 `flock` / Win32 `LockFileEx`、进程管理、系统字体扫描、Windows 自动 UTF-8 模式）。
+  - **首次安装（在 `$SKILL` 目录下运行）**：
+    - macOS / Linux：`python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`；`ffmpeg` 需带 `drawtext`（`brew install ffmpeg-full` 并加进 PATH）。
+    - Windows（PowerShell）：`py -3.12 -m venv .venv; .venv\Scripts\python.exe -m pip install -r requirements.txt`；`ffmpeg` 用 `winget install Gyan.FFmpeg`，Node 用 `winget install OpenJS.NodeJS.LTS`。
+    - 自检：`$PY scripts/oscompat.py`（核查系统、编码、字体）与 `$PY scripts/watermark_cleanup.py preflight`（核查识别引擎）。
+  - 100x 客户端 `scripts/x100.py` 已内置在仓库中，调用本机 100x 插件桥（默认 `~/.codex/plugin-sources/100x-mcp/plugins/100x`，可用 `X100_PLUGIN` 指定），需 Node 22+ 与已登录的 100x 账号。
 
-- **一条视频一个 RUN 目录、一个处理进程**，互不读写；一条出错不影响其他条。多条视频同时跑时，每条视频开一个 Agent 会话（或在一个会话里给每条视频各起一条后台命令链），各自从第 0 步跑到交付。
-- **一条视频的段全部并行**：`generate` 先锁定全部段、检查全部提示词，再一次性提交（`apimart_wan.py run-batch`，默认 16 个线程提交、轮询、下载）；消音段和普通段可以在同一批里。APIMART 账号支持至少 600 个并发任务；5 条视频 × 约 25 段 × 1 个任务 ≈ 125 个任务。
-- **参考片上传到 APIMART**（用户 2026-11-20 "隧道问题怎么解决"）：每段的参考视频先用 APIMART 的视频上传接口 `POST /v1/uploads/videos?retention_days=3`（multipart 字段 `file`，MP4 ≤ 50 MB，3 天保存在账号免费额度内）传上去，请求里的 `video_urls` 填它返回的 CDN 地址；按内容哈希缓存在 `RUN/apimart/video_uploads.json`，剩一天以上就复用，重提不重传。原因：11-20 片子 2210 走本机 Cloudflare 临时隧道时 9 段两轮全被拒（"Failed to probe reference video duration"），隧道只有 22–80 KB/s，seedance-2.0 取片 35–50 秒就放弃；同一个 1.5 MB 文件直传 APIMART 只要 2.2 秒。产品图照旧走 `/v1/uploads/images`。`scripts/hostd.py`（全机共享的本地文件服务 + Cloudflare 隧道 + 取片闸门）只在上传接口不可用时手动打开：`LYMPHLOOP_VIDEO_HOST=tunnel`；这时 `hostd.py status` 看测速，慢不要重启隧道（会打断别的会话），全机同时取片最多 8 个（`LYMPHLOOP_FETCH_SLOTS`）。第三方公网托管（`LYMPHLOOP_HOST_MODE=litterbox|tempfile`）和自建地址（`LYMPHLOOP_PUBLIC_BASE`）只在用户同意时手动打开。
-- 共享的只有这个托管进程和生成渠道（100x 或 APIMART）的账号额度；每条视频的缓存（听写、切点分级、OCR、图片上传记录、生成账本）都在各自 RUN 里。
+---
 
-## 交付
+## 并行与交付
 
-`OUT/master.mp4` + `master.mp4.timeline.json`（源→成片映射）+ `master.mp4.verification.json`（技术核验）+ `RUN/plan/decisions.json`（哪些镜头为何被换）+ `RUN/plan/segments.json`（怎么切的、为什么）+ `RUN/generation/jobs/*.json`（每次生成的提示词、任务号、花费，含 local_splice）。向用户汇报：换了哪些段、新旧时长及时间码、花了多少钱、终检结果、已知瑕疵。
-
-**对比看板**（用户 2026-11-19："做一个像这样的看板，和原片对比，我要看和原片差多少，然后哪里改了我也要在轴上能看出来"）：`finish.py` 最后一步自动生成（单独跑是 `scripts/compare_board.py --run RUN`），输出 `OUT/对比看板/index.html` + `media/`（整个文件夹离线可用）。审片发现的瑕疵写进 `RUN/plan/board_notes.json`（`{G##: {"issue": "…", "note": "…", "fix": true}}`），有 issue 的段在轴上标红；重剪过的片子把上一版存到 `OUT/versions/` 再用 `--previous … --previous-timeline …` 放进看板，右边可切换对照。
-
+- **并行提速**：一条视频独立一个 RUN；单条内第 2 / 4 / 5 步可同时后台跑，`plan` 后立即后台 `generate --refs-only`（LaMa 带跨 RUN 缓存），`generate` / `round submit` / `review` / `captions` 均自动多线程并行；同素材批次用 `swap.py reuse` 零费用复用代表片结果。
+- **交付清单**：`OUT/master.mp4` + `master.mp4.timeline.json` + `master.mp4.verification.json` + `OUT/对比看板/index.html`（内置 Range HTTP 服务 `compare_board.py --run RUN --serve --port 8765`）+ 完整交付汇报（换段明细、新旧时间码、总积分/费用、终检结论、已知瑕疵）。

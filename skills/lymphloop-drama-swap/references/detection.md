@@ -1,41 +1,53 @@
-# 识别：三层取并集，偏召回
+# 竞品与冲突识别（Antigravity 原生零 Gemini 模式）
 
-过去漏识别的原因是只信一次全片扫描。这里改成三层互相兜底，并且**成片之后再筛一遍**。三层现在都由 Antigravity Agent 自己看、自己听（默认不调外部 Gemini）：脚本负责出拼图、片段和听写，Agent 把结论写成 JSON 导入。
+本插件默认运行在 **Antigravity 原生看听模式**（`agent_native.is_native() == True`），完全不调用外部 Gemini API。识别由“本地脚本提取证据 + 当前 Agent 直接用 `read_file` 看图/看片/听音并导入结论”组成。
 
-## 第零层：竞品档案（`competitor`，2026-11-11 起换任意竞品）
-- `swap.py competitor` 出 24 格全片总览图（`RUN/agent_review/overview_grid.jpg`）、本地 Whisper 全片听写和声音采样；Agent 看图、听采样后填 `RUN/detect/competitor.json`：品牌名、剂型（`drops / hard_capsule / softgel / tablet / gummy / powder`，其他算超出范围）、容器和剂型单元的长相、出现过的服用方式、难例（局部、背景、镜面、散粒）、点到的成分、漂浮水印文字。总览图就是本条的识别锚点图（`anchor_images`；只用于识别，永不作生成参考）。
-- 档案的 `scope_note` 写明这条广告卖的是什么功效。不是淋巴排毒品类时（少见，用户 2026-11-11），识别范围扩大到所有与 yesnap LymphLoop 矛盾的元素：点名的成分（改成 LymphLoop 自己的成分）、成分画面、包装图和片尾上的功效徽章、别的品类的功效说法；改后的机制是否讲得通不用管。
-- Agent 对照总览图和帧板改正或补全 JSON（漏了的难例、错的剂型、几种剂型同时出现），再 `competitor --accept --note`。剂型不在范围内时 `--accept` 会拒绝，先告诉用户。
-- 接受后：逐镜头筛查、审片、终检都按它描述的竞品来找；水印扫描的目标词默认取它的 `watermark_text`（否则品牌名）。
+---
 
-## 第一层：全片节点，固定契约（`detect-pro`）
-- 输入：`detect-pro` 给出的全片听写 `RUN/agent_review/transcript.json`、镜头拼图 `shot_grids/shot_grid_##.jpg`（可疑短镜直接看 `RUN/clips/S###.mp4`）和本次帧率/帧数；Agent 按用户原契约的三栏格式来写。
-- 产出：三栏节点（VO / Dialogue / Visual）与最小改词。这是**台词改写的唯一来源**；画面召回只当候选。
-- 落盘：Agent 写 `pro_nodes.json`，`detect-pro --import-nodes` 导入。
+## 1. 四步识别分工
 
-## 第二层：逐镜头筛查（`screen`）
-- Agent 逐批看镜头拼图，短镜、弱露瓶的镜头直接看那个镜头的片段（带音轨），写出 `{replace_ids, unsure_ids, notes}`，`screen --import-verdicts` 导入。一个镜头一个镜头地判，比全片一次扫描可靠得多。
-- 看的时候对照本条竞品档案（`competitor.json`）的长相描述和**难例清单**；没有档案的旧 RUN 用内置的 Lymphoria 描述和 `assets/competitors/` 锚点图。判定口径：容器握在拳头里看不到标签也算 yes；掌心的散粒、桌上的一颗软糖、勺里的粉（不连包装）也算竞品。锚点图只进识别请求，永不作生成参考。
-- 判定偏召回：`competitor_visible ∈ {yes, unsure}`、服用动作是竞品剂型（dropper、bottle、capsule_or_tablet、softgel、gummy、powder_or_drink_mix；喝白水、咖啡算 other）、非 LymphLoop 品牌文字、语音提到产品（yes/unsure）→ replace。
-- `unsure` 的镜头直接看片段再判一次，仍拿不准就按 replace 处理。
+1. **全片竞品档案（`swap.py competitor`）**
+   - 脚本自动产出：24 格全片总览图 `RUN/agent_review/overview_grid.jpg`、本地 `faster-whisper` 全片听写 `RUN/agent_review/transcript.json`、3 段 6 秒说话人音色采样 `RUN/agent_review/voice_samples/*.mp4`，以及 `RUN/detect/competitor.json` 骨架。
+   - Agent 直接用 `read_file` 看总览图、听 3 段采样视频（记录说话人年龄/性别/口音/音色/是否有 BGM）、读听写稿，补全 `competitor.json`（重点：`brand_names`、`form`、`container_look`、`dose_unit_look`、`hard_cases`、`watermark_text`、`ingredients_named`），执行 `swap.py competitor --accept --note "..."`。
+   - 超出 6 类常见剂型范围（drops / hard_capsule / softgel / tablet / gummy / powder）时，先征得用户同意再加 `--out-of-scope-ok`。
 
-## 第三层：Agent 看帧板（`shots` 的 sheets）
-- 每个镜头一张帧板，每格有帧号。看的时候专门找：桌面/背景/镜面里的容器、手里一闪而过的滴管或胶囊、掌心或碗里的散粒、成分特写、包装特写、字幕里出现的品牌名。
-- 发现前两层都没标的 → `overrides.json` 标 replace，写清帧号。
-- 认为筛查误报（例如水杯、化妆品瓶）→ 只有看过帧板和 `frames` 放大图后才能标 keep，并写理由。
+2. **全局冲突节点识别（`swap.py detect-pro`）**
+   - 脚本自动将切好的镜头打包成紧凑网格图 `RUN/agent_review/shot_grids/shot_grid_##.jpg` 并确保 `transcript.json` 就绪。
+   - Agent 结合听写稿和镜头网格，标出所有需要替换的冲突节点（`visual` 画面竞品、`dialogue` 画内对白冲突、`vo` 画外旁白冲突，以及具体改词建议），写入 `RUN/detect/pro_nodes.json` 后运行：
+     ```bash
+     "$PY" scripts/swap.py detect-pro --run RUN --import-nodes RUN/detect/pro_nodes.json
+     ```
+   - 改词口径：只改冲突的品牌名、剂型词、用法词与我方没有的竞品成分；**画内可见嘴部的改词优先音节数对齐**（见 [rules-now.md](rules-now.md)）。我方包装正面只有 7 种合法成分（Dandelion、Cleavers、Burdock Root、Red Clover、Calendula、Echinacea、Bromelain，含对应西语名）。
 
-## 合并（`merge`）
-镜头 = 决策单位。任一层说换就换；kinds 取并集；节点里的改写挂到对应镜头。`decisions.json` 是后续 plan 的唯一输入。
+3. **逐镜头视觉筛查（`swap.py screen`）**
+   - Agent 逐张看 `shot_grids/shot_grid_##.jpg`（小物件、弱露瓶、背景/桌面/包口疑似镜头直接用 `read_file` 打开对应 `RUN/clips/S###.mp4` 放大确认），重点对照 `competitor.json → hard_cases` 查：
+     - 桌面/台面/抽屉/杯架/车内/画边/镜面/虚焦里的竞品容器；
+     - 手里或掌心散落的剂型单元（滴管、胶囊、软糖、药片、粉末/量勺）；
+     - 手机或电脑屏幕上的竞品购物页/落地页；
+     - 只出现几帧的极短露瓶镜头。
+   - 写出精简判定 JSON `{"replace_ids": [...], "unsure_ids": [...], "notes": {...}}`，执行：
+     ```bash
+     "$PY" scripts/swap.py screen --run RUN --import-verdicts verdicts.json
+     ```
+   - 脚本会自动展开生成 `RUN/screen/S###.json` 与 `summary.json`。
 
-## 终检（`final-screen`）
-成片重新切镜头，变动镜头的帧板拼成大图（`final/<sha>/agent_review/`）由 Agent 筛查。发现问题时先看帧板：
-- 真漏换 → 该镜头 override replace，回到 plan/generate 只补这一段，再 recut。
-- 生成段里模型自己画出了瓶子/胶囊/文字 → 记录候选审片漏项和时间码，用现有素材局部修补；不重新生成（一次成片）。
-- 误报 → 记录理由，交付时说明。
+4. **合并与人工复核覆盖（`swap.py merge` + `overrides.json`）**
+   - `merge` 将 `pro_nodes.json` 与 `screen` 合并成 `RUN/plan/decisions.json`。
+   - 需修正任何误报、漏报，或标记“画面要改但没有实体竞品（如成分动画/标题卡）”时，编辑 `RUN/detect/overrides.json`：
+     - 漏报补标：`{"S012": {"decision": "replace", "kinds": ["visual"], "note": "桌角露琥珀瓶"}}`
+     - 误报放行：`{"S020": {"decision": "keep", "note": "实际为水杯，无竞品"}}`
+     - 非实体竞品视觉镜头（防规则表误塞产品）：`{"S045": {"decision": "replace", "kinds": ["visual", "vo"], "physical_competitor": false, "note": "成分动画换我方植物"}}`
+   - `overrides.json` 是唯一能把 `replace` 改回 `keep` 的合法途径。修改后重跑 `merge → plan`。
 
-## 边界
-- 三层并用仍不是零漏检保证；向用户说"已三层筛查 + 终检"，不说"100%"。
-- 一个镜头里产品反复被遮挡不拆成多段；镜头内任一帧露出即整镜头替换。
-- 叠化/闪白转场找不到硬切时，把转场整个并入替换段。
+---
 
-- **override 里的 `physical_competitor`**（2026-11-22）：镜头标了 `visual` 是因为成分画面、标题字要改，而画面里没有实体竞品（瓶、滴管、胶囊、包装）时，加 `"physical_competitor": false`。不加的话换品设计的 R0 会当成“人手边有小件竞品”，往这一镜里塞一支手捏条包。
+## 2. 切点分级与终检门禁
+
+- **切点分级（`scenes.py`）**：原生模式下基于本地画面直方图差分与静音谷检测（`quiet_cuts`）划分段落锁边与镜头锁边，可在 `RUN/plan/lock_overrides.json` 中手动微调（`{"S019": "shot", "S020": "paragraph", "S007": "none"}`）。
+- **终检多道硬门禁（`swap.py final-screen`）**：
+  - **水印残留检查**：按固定位置模板/OCR 复扫，要求 `watermark_left == []`；
+  - **口播听写门禁（`speech_gate.py`）**：本地 `faster-whisper` 复听改动区间，要求 `speech_left == []`（无竞品品牌名、无我方没有的成分词）；
+  - **闪回关（`cutscan.py` + `flashback-review`）**：对所有接缝、拼接点与 ≤0.5 秒碎镜头出帧板，Agent 逐张 `read_file` 看完后执行 `swap.py flashback-review --run RUN --clean`（有漏网则 `--hit A-B`）；
+  - **产品帧板关（`product-review`）**：对含纸盒的生成段按原尺寸每秒 3 帧裁出产品帧板，Agent 逐张 `read_file` 看完后执行 `swap.py product-review --run RUN --clean`（有穿帮则 `--hit "秒-秒:说明"`）。
+
+> **外部 Gemini 兼容开关（默认关闭）**：仅当环境变量显式设 `LYMPHLOOP_ALLOW_EXTERNAL_GEMINI=1` 时，脚本才会调用 `google_api.py` / `flash_screen.py`；默认 Antigravity 原生链路不需要也不使用任何外部 Gemini 密钥。
