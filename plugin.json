@@ -1,0 +1,7 @@
+{
+  "name": "lymphloop-drama-swap",
+  "displayName": "LymphLoop Drama Swap",
+  "version": "1.0.0",
+  "description": "Swap competitor short-form drama supplement video ads to yesnap LymphLoop using Antigravity native multimodal see/hear (zero external Gemini) and 100x MiniMax H3 (standard 768P, 9:16).",
+  "repository": "https://github.com/894905407zs-wq/lymphloop-drama-swap"
+}

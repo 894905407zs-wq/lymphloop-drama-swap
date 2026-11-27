@@ -1,0 +1,111 @@
+{
+ "name": "LYMPHORIA.CO 六处固定水印",
+ "target": "LYMPHORIA",
+ "ref_size": [
+  720,
+  1280
+ ],
+ "places": [
+  {
+   "id": 0,
+   "box": [
+    35,
+    24,
+    26,
+    130
+   ],
+   "vertical": true,
+   "orient": "v_down",
+   "tpl_offset": [
+    1,
+    1
+   ],
+   "frames_averaged": 2083
+  },
+  {
+   "id": 1,
+   "box": [
+    106,
+    201,
+    130,
+    26
+   ],
+   "vertical": false,
+   "orient": "h",
+   "tpl_offset": [
+    1,
+    1
+   ],
+   "frames_averaged": 1949
+  },
+  {
+   "id": 2,
+   "box": [
+    674,
+    24,
+    26,
+    130
+   ],
+   "vertical": true,
+   "orient": "v_down",
+   "tpl_offset": [
+    1,
+    1
+   ],
+   "frames_averaged": 2056
+  },
+  {
+   "id": 3,
+   "box": [
+    12,
+    1132,
+    26,
+    130
+   ],
+   "vertical": true,
+   "orient": "v_down",
+   "tpl_offset": [
+    1,
+    1
+   ],
+   "frames_averaged": 1982
+  },
+  {
+   "id": 4,
+   "box": [
+    496,
+    1042,
+    130,
+    26
+   ],
+   "vertical": false,
+   "orient": "h",
+   "tpl_offset": [
+    1,
+    1
+   ],
+   "frames_averaged": 1754
+  },
+  {
+   "id": 5,
+   "box": [
+    668,
+    1132,
+    26,
+    130
+   ],
+   "vertical": true,
+   "orient": "v_down",
+   "tpl_offset": [
+    1,
+    1
+   ],
+   "frames_averaged": 1956
+  }
+ ],
+ "built_from": [
+  "1506620285858447.mp4",
+  "1812799866647119.mp4"
+ ],
+ "note": "Every LYMPHORIA.CO film scanned so far (15 films, three Codex batches and our own runs) carries the same mark in the same\nsix places of the 720x1280 picture, within 3 px: one vertical droplet+LYMPHORIA in each corner and one horizontal one in\nthe upper left and lower right of the middle. The mark is a fixed semi-transparent picture, so whether it is on screen\nin a frame is a template match of its strokes, not a reading:"
+}

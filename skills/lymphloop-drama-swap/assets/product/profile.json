@@ -1,0 +1,383 @@
+{
+ "name": "yesnap lymphloop",
+ "product_id": "yesnap-lymphloop",
+ "default_language": "match original spoken language",
+ "packaging": "Teal outer carton with teal flexible individual stick packets",
+ "use": "Shown sealed; sipped from an already-opened packet (opening happens off screen, never torn on camera).",
+ "ingredients": "See facts.ingredients_printed_front (the 7 printed on the carton front) — the only ingredient list. Herb counts and generic benefit wording are not conflicts.",
+ "marketing_anchors": "Preserve original taste descriptions (including Tastes like honey), course lengths (including 6 weeks), discounts and conversion wording exactly during minimal conflict rewriting.",
+ "dimensions_for_internal_reasoning_only_cm": {
+  "carton": [
+   10,
+   7,
+   13
+  ],
+  "stick": [
+   10,
+   2.5,
+   0.5
+  ]
+ },
+ "positive_relative_scale_prompt": "A carton whose front is about as wide as an adult palm, resting fully on one open palm, with its upright front slightly taller than it is wide and its depth visibly shallower than its front width. A slim palm-scale flexible stick packet, shorter than the carton height and about as long as the carton front is wide, only slightly wider than an adult thumb pad; its softly filled thickness remains much smaller than its width. Hand contact naturally hides part of the packet body. The selected product reference fixes its package proportions; the original shot fixes hand scale, depth and perspective throughout the edited shot.",
+ "appearance_authority": {
+  "stick": "assets/product/stick-handheld-scale.jpg",
+  "opened_stick": "assets/product/opened-packet-handheld.jpg",
+  "carton": "assets/product/carton-views.jpg",
+  "carton_hand_scale": "assets/product/carton-hand-scale.jpg",
+  "note": "Four model references: sealed packet, opened packet, and for any carton exactly two images: carton_views (one carton, nine studio views, no hands) + carton_hand (a real hand holding the carton front, for scale and grip). User 2026-11-20 removed every other carton image."
+ },
+ "asset_manifest": [
+  {
+   "file": "assets/competitors/lymphoria-anchor.png",
+   "sha256": "c3febc711cc710b6002c9394dffc5ba5c5e149ef86fed850c6b2d6b17133683a",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "Migrated 2026-10-21 from replace-product-dual; local only"
+  },
+  {
+   "file": "assets/competitors/lymphoria-bottle-source.jpg",
+   "sha256": "0e97bc28440b65a600159bf3b400108719402d98fdd76ce57ea07c450b8b3b64",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "Migrated 2026-10-21 from replace-product-dual; local only"
+  },
+  {
+   "file": "assets/competitors/lymphoria-dropper-source.jpg",
+   "sha256": "50690da180095eab833a13d57820438940eef3e603886621ff6f752baccb1ddd",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "Migrated 2026-10-21 from replace-product-dual; local only"
+  },
+  {
+   "file": "assets/competitors/lymphoria-anchor-hd.png",
+   "sha256": "c69ab364b5f4aec6e40fd4c3528e7b63803e9bb14a55b60229f6ec751a42d0ab",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor packshot 2026-10-21; detection only, never a generation reference"
+  },
+  {
+   "file": "assets/competitors/lymphoria-anchor-hd-transparent.png",
+   "sha256": "be14cba46765aa97ce7f5c85cc27e6f54a69aef9f2c82ce92621b06c4606bf0e",
+   "role": "competitor_anchor",
+   "has_alpha_channel": true,
+   "alpha_range": [
+    0,
+    255
+   ],
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor packshot 2026-10-21; detection only, never a generation reference"
+  },
+  {
+   "file": "assets/competitors/lymphoria-packshot-source.webp",
+   "sha256": "d5effb5920fa49f0c16b23355f72398dfc0275564980a5362846edaf57801c6b",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor packshot 2026-10-21; detection only, never a generation reference"
+  },
+  {
+   "file": "assets/competitors/lymphoria-bottle-capped-packshot.webp",
+   "sha256": "a5b95a1b0e7b009aa098818ed0e278bea4c702badaea6bb31303e6836946b795",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor image 2026-10-21 (1254x1254); detection only, never a generation reference"
+  },
+  {
+   "file": "assets/competitors/lymphoria-bottle-open-no-cap.webp",
+   "sha256": "44e6c88cc16343acb1526617a2588501745ac6e2913fb31291ed00a44e5ad839",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor image 2026-10-21 (1254x1254); detection only, never a generation reference"
+  },
+  {
+   "file": "assets/competitors/lymphoria-dropper-with-liquid.webp",
+   "sha256": "ddb46a1164d15a3b7aa0e20b2a31c6499f9b2e2474c308eafa0eeb3106af19e6",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor image 2026-10-21 (1254x1254); detection only, never a generation reference"
+  },
+  {
+   "file": "assets/competitors/lymphoria-hand-held-capped.webp",
+   "sha256": "ba66a09b4e677dd83cfaa14410360f246294bf03a47fa191f5c260a1041c3b22",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor image 2026-10-21 (1254x1254); detection only, never a generation reference"
+  },
+  {
+   "file": "assets/competitors/lymphoria-hand-held-open.webp",
+   "sha256": "d862190c4aec5d6531d18ed8968b9936d71016d6afa21c41ead3e6bad78dce84",
+   "role": "competitor_anchor",
+   "has_alpha_channel": false,
+   "alpha_range": null,
+   "model_input_allowed": false,
+   "source_note": "User-supplied competitor image 2026-10-21 (1254x1254); detection only, never a generation reference"
+  },
+  {
+   "file": "assets/product/stick-handheld-scale.jpg",
+   "sha256": "8b2fc46b87ac2aee8fd470c92d81975cb1ae2e30feba80d7efbd273b2ab89106",
+   "source_note": "User-supplied real photo of one sealed packet held between fingertips (2026-10-23); the sealed-packet reference (handheld_photo), one of the three registered model references. 2026-11-21: carpet/wall background replaced with plain grey (214,214,216) via Vision subject mask; hand and packet pixels unchanged; original kept in skills-backup/lymphloop-swap-claude-packet-carpet-2026-11-21.",
+   "role": "active_product_reference",
+   "view": "handheld_photo",
+   "model_input_allowed": true,
+   "has_alpha_channel": false,
+   "pixel_size": [
+    1024,
+    1820
+   ],
+   "approval_status": "fixed_by_user"
+  },
+  {
+   "file": "assets/product/opened-packet-handheld.jpg",
+   "sha256": "0620c4ed1dba4ad8e715d617153d2833d4c29a49f047733530df8b71a2aec9ac",
+   "source_note": "User-supplied real photo, 2026-10-24: one OPENED packet (top seal strip torn off, short soft slightly crinkled flat opening) held upright between thumb and fingers on its lower half. Original 2304x4096 copied byte-for-byte. 2026-11-21: carpet/wall background replaced with plain grey (214,214,216) via Vision subject mask; hand and packet pixels unchanged; original kept in skills-backup/lymphloop-swap-claude-packet-carpet-2026-11-21.",
+   "role": "active_product_reference",
+   "view": "opened_packet_hand",
+   "model_input_allowed": true,
+   "has_alpha_channel": false,
+   "pixel_size": [
+    2304,
+    4096
+   ],
+   "approval_status": "fixed_by_user"
+  },
+  {
+   "source_note": "3x3 studio views of the same carton on a plain background, no hands (front, three-quarter, sides, top-down with the lid, back), from the user 2026-11-20 (Downloads/桌面/产品参考/20260923-161602.png). The carton image sent to generation.",
+   "role": "active_product_reference",
+   "view": "carton_views",
+   "model_input_allowed": true,
+   "has_alpha_channel": false,
+   "pixel_size": [
+    1254,
+    1254
+   ],
+   "approval_status": "fixed_by_user",
+   "file": "assets/product/carton-views.jpg",
+   "sha256": "274e7bf5caef44b28d147d4acb6c7d1a86b215b99bcf04d29c49ea52db6e03a0"
+  },
+  {
+   "source_note": "A real adult hand holding the carton front on a plain light-grey background (user 2026-11-20, Downloads/c20b068a-02fa-4cbe-a1eb-680cfe584e31.png: the carpet of the first photo was removed after the model copied it into a close-up). Sent with carton_views only to fix the carton-to-hand scale and the grip (the box width fills the span between thumb and fingers). The carpet original is in ~/.codex/skills-backup/lymphloop-swap-claude-carton-hand-carpet-2026-11-20/.",
+   "role": "active_product_reference",
+   "view": "carton_hand",
+   "model_input_allowed": true,
+   "has_alpha_channel": false,
+   "pixel_size": [
+    940,
+    1673
+   ],
+   "approval_status": "fixed_by_user",
+   "file": "assets/product/carton-hand-scale.jpg",
+   "sha256": "05fc2a7ebee811cd0589e73264715e15879193cdbf20bee90d804835d1e59c66"
+  },
+  {
+   "file": "assets/product/landing-page-phone.jpg",
+   "sha256": "1ce1bf7bb7df0d8eae283521d055d34435bcf4a480c80217c42306e5141af1a8",
+   "role": "active_product_reference",
+   "view": "phone_page",
+   "model_input_allowed": true,
+   "has_alpha_channel": false,
+   "pixel_size": [
+    828,
+    1792
+   ],
+   "approval_status": "fixed_by_user",
+   "source_note": "A real phone screenshot of the yesnap LymphLoop product page in the Yesnap Health store (user 2026-11-19, test film 2412 RUN/refs/shop-page-yesnap.png; made a skill asset 2026-11-22: \"电脑和手机的页面应该都要放在skill里\"). Sent only for a phone screen that shows the competitor's shopping / landing page."
+  },
+  {
+   "file": "assets/product/landing-page-desktop.jpg",
+   "sha256": "a00a6d03ed91467d7797d6f3746ea7b8b5c44f8ce3b8f518d5a4f2ceac1d0e02",
+   "role": "active_product_reference",
+   "view": "desktop_page",
+   "model_input_allowed": true,
+   "has_alpha_channel": false,
+   "pixel_size": [
+    1567,
+    929
+   ],
+   "approval_status": "fixed_by_user",
+   "source_note": "A real desktop browser screenshot of the yesnap LymphLoop product page (user 2026-11-22: \"如果有电脑页面，可以用这张图，不用管价格是多少，重点是电脑里显示的产品落地页要能给他换过来\"). Sent only for a laptop / desktop screen that shows the competitor's shopping / landing page. The price on it does not matter."
+  }
+ ],
+ "active_model_reference_files": [
+  "assets/product/stick-handheld-scale.jpg",
+  "assets/product/opened-packet-handheld.jpg",
+  "assets/product/carton-views.jpg",
+  "assets/product/carton-hand-scale.jpg",
+  "assets/product/landing-page-phone.jpg",
+  "assets/product/landing-page-desktop.jpg"
+ ],
+ "reference_input_policy": {
+  "target_product_references_require_true_transparency": false,
+  "allowed_files_only": true,
+  "archival_files_allowed_as_model_input": false,
+  "additional_product_view_policy": "Use only the registered references (handheld_photo, opened_packet_hand, carton_views, carton_hand, phone_page, desktop_page). A carton shot sends carton_views + carton_hand together. A phone screen showing the competitor's shopping or landing page sends phone_page; a laptop / desktop screen sends desktop_page. Do not invent or auto-add other product images.",
+  "source_video_edit_allows_original_competitor": true
+ },
+ "reference_views": {
+  "handheld_photo": "assets/product/stick-handheld-scale.jpg",
+  "opened_packet_hand": "assets/product/opened-packet-handheld.jpg",
+  "carton_views": "assets/product/carton-views.jpg",
+  "carton_hand": "assets/product/carton-hand-scale.jpg",
+  "phone_page": "assets/product/landing-page-phone.jpg",
+  "desktop_page": "assets/product/landing-page-desktop.jpg"
+ },
+ "analysis_default_reference_views": [
+  "handheld_photo",
+  "carton_views"
+ ],
+ "reference_selection_policy": {
+  "policy": "Choose the product FORM and STATE first from real-world use (references/controlled-edit.md §4), then send only what appears: sealed packet held, shown or pulled out -> handheld_photo; packet already opened, drinking, squeezing into water -> opened_packet_hand; any carton -> carton_views + carton_hand (in that order), written with the carton template (references/carton-swap.md). A phone screen that shows the competitor's shopping / landing page -> phone_page; a laptop or desktop screen -> desktop_page (user 2026-11-22), plus the form image of any product held in the same shot.",
+  "analysis": [
+   "handheld_photo",
+   "carton_views"
+  ],
+  "default": [
+   "handheld_photo"
+  ]
+ },
+ "fixed_reference_set": {
+  "status": "user_confirmed",
+  "confirmed_date": "2026-11-20",
+  "count": 6,
+  "files": [
+   "assets/product/stick-handheld-scale.jpg",
+   "assets/product/opened-packet-handheld.jpg",
+   "assets/product/carton-views.jpg",
+   "assets/product/carton-hand-scale.jpg",
+   "assets/product/landing-page-phone.jpg",
+   "assets/product/landing-page-desktop.jpg"
+  ],
+  "note": "2026-11-20: carton images reduced to carton_views + carton_hand (user: the other carton images were no use); old carton-sheet/front/top and carton-sources are in ~/.codex/skills-backup/lymphloop-swap-claude-carton-2026-11-20/. 2026-11-22: phone_page and desktop_page added (user): our product page for a phone or computer screen that shows the competitor's page."
+ },
+ "facts": {
+  "flavor": "Orange Mango",
+  "units_per_box": 30,
+  "net_weight_per_packet": "8 g (0.28 oz) as printed on carton and sachet; one formula artwork says 10 g — do not state either number in generated speech",
+  "serving_claim_printed": "6785mg per serving; 12-IN-1 HERBAL BLEND; DIETARY SUPPLEMENT",
+  "net_weight_box": "8.46 oz (240 g)",
+  "ingredients_printed_front": [
+   "Cleavers",
+   "Burdock Root",
+   "Dandelion",
+   "Bromelain",
+   "Echinacea",
+   "Calendula",
+   "Red Clover"
+  ],
+  "ingredients_for_conflict_mapping": [
+   "Cleavers",
+   "Burdock Root",
+   "Dandelion",
+   "Red Clover"
+  ],
+  "carton": {
+   "dimensions_cm": [
+    10,
+    7,
+    13
+   ],
+   "lid": "tuck-top flip lid HINGED ALONG THE TOP EDGE OF THE FRONT PANEL (the LYMPHATIC DRAINAGE SUPPORT face). To open, fingers lift the lid edge above the BACK panel (Supplement Facts face) and the lid swings up and over toward the front, ending upright/tilted forward; the white inner side faces the opener and two small side flaps fold out. Sticks stand upright, tightly packed, tops up. (User-confirmed 2026-10-21.)",
+   "faces": "front = LYMPHATIC DRAINAGE SUPPORT panel; back = Supplement Facts + Why LYMPHLOOP text; sides carry the logo"
+  },
+  "stick": {
+   "dimensions_cm": [
+    10,
+    2.5,
+    0.5
+   ],
+   "form": "flexible single-use liquid stick sachet, teal film with white yesnap/LymphLoop print",
+   "notch": "small tear notches on BOTH side edges just below the top seal band (user-confirmed 2026-10-21); the band above the notches is the narrow seal strip",
+   "scale_vs_hand": "about index-finger length, slightly wider than a thumb pad; lies across an adult palm"
+  },
+  "physical_state_chain": [
+   "closed_carton",
+   "open_carton",
+   "sealed_sachet_extracted",
+   "top_seal_torn (OFF SCREEN only, skipped with a hard cut)",
+   "opened_sachet",
+   "sip"
+  ],
+  "opening": "OFF-SCREEN fact only; never staged on camera. One hand holds the sachet upright below the notches; the other pinches the narrow top band and tears it sideways in ONE motion so the WHOLE top strip comes off (never just a corner); the detached strip (~2.5 cm wide, <1 cm tall, silver tear edge) stays pinched in the tearing hand; the opening is a short soft flat slit, never a V/W rip or serrated edge; no liquid or cross-section visible. (User-confirmed 2026-10-21.)",
+  "consumption": "ONE hand only: it raises the opened end to the lips, lips close around the short opening and the person sips while the head tilts back slightly and the sachet tilts toward horizontal with a light squeeze; the other hand is free; no visible liquid, no pouring, no dropper. (User-confirmed 2026-10-21.)",
+  "liquid": "pale yellow-green, clear, low viscosity; only ever visible in a cup when the source shot already shows liquid being added to a cup",
+  "display_defaults": "closed carton standing on its base with one sealed sachet lying flat or leaning against it with real support; sachets never stand upright on their own",
+  "never_show": [
+   "competitor bottle, dropper, pipette, bulb or cap",
+   "liquid inside the sachet or an opening cross-section",
+   "back-panel Supplement Facts close-ups (AI rewrites small print)",
+   "subtitles, captions, watermarks",
+   "any product view beyond the registered references",
+   "the sachet being torn open on screen (user 2026-10-24): show the sealed sachet (handheld_photo) for display, the already-opened sachet (opened_packet_hand) for sipping; a one-take 'pull dropper -> drip' gets a hard cut between the two"
+  ],
+  "confirmed_by_user": {
+   "date": "2026-10-21",
+   "items": [
+    "lid hinge on front-panel top edge; back-panel edge is lifted",
+    "notches on both sides",
+    "whole top strip torn off in one motion",
+    "one-handed sip is the natural, authentic action"
+   ]
+  }
+ },
+ "physical_evidence_local": {
+  "videos": {
+   "open_carton": "assets/physical/open-carton.mp4",
+   "extract_sachet": "assets/physical/extract-sachet-from-carton.mp4",
+   "tear_seal": "assets/physical/tear-sachet-top-seal.mp4",
+   "sip": "assets/physical/sip-opened-sachet.mp4"
+  },
+  "rule": "Real usage clips for the agent only: watch them before writing carton-opening, extraction or sipping actions; the tear clip only explains what happens OFF screen (tearing is never staged on camera). Never upload these files."
+ },
+ "competitors": {
+  "known": [
+   {
+    "brand": "Lymphoria",
+    "product": "lymphatic drainage liquid herbal extract, 2 fl oz (59 ml)",
+    "look": "amber/brown glass dropper bottle with a ribbed black screw cap and black rubber bulb; cream label with a dark-green band, green leaf logo and the words LYMPHORIA / lymphatic drainage / TRADITIONAL LYMPHATIC SUPPORT and four herb icons (Cleavers, Red Clover, Stillingia, Prickly Ash); glass pipette holding pale amber honey-coloured liquid",
+    "hard_cases": [
+     "bottle gripped in a fist so the label is completely hidden: only the amber glass neck/shoulder, the black cap or the bare amber base show between the fingers",
+     "bottle with the cap removed: an open amber glass neck with screw threads, no label visible",
+     "the dropper alone, held above a mouth, tongue or cup, with or without a hanging drop",
+     "bottle in the background, on a table, in a mirror, or partially out of frame",
+     "any amber glass bottle of this shape even when the label text cannot be read"
+    ]
+   }
+  ],
+  "screen_anchor_images": [
+   "assets/competitors/lymphoria-bottle-capped-packshot.webp",
+   "assets/competitors/lymphoria-bottle-open-no-cap.webp",
+   "assets/competitors/lymphoria-dropper-with-liquid.webp",
+   "assets/competitors/lymphoria-hand-held-capped.webp",
+   "assets/competitors/lymphoria-hand-held-open.webp",
+   "assets/competitors/lymphoria-bottle-source.jpg"
+  ],
+  "rule": "Anchor images are only for detection prompts and the agent's own reference; they are never uploaded as generation references.",
+  "anchor_notes": {
+   "lymphoria-anchor-hd.png": "Earlier cut-out from the marketing image; kept as backup.",
+   "lymphoria-anchor.png": "Legacy 171x526 anchor from replace-product-dual, kept for comparison only.",
+   "lymphoria-packshot-source.webp": "Original 1500x1500 marketing image (plant, glass, claim panels); local reference only.",
+   "lymphoria-bottle-capped-packshot.webp": "User-supplied 2026-10-21 clean white-background packshot, capped. Primary anchor.",
+   "lymphoria-bottle-open-no-cap.webp": "Cap removed, open threaded neck.",
+   "lymphoria-dropper-with-liquid.webp": "Dropper alone with amber liquid and hanging drop.",
+   "lymphoria-hand-held-capped.webp": "Fist grip hides the label; only cap, neck and base show — the typical missed case.",
+   "lymphoria-hand-held-open.webp": "Fist grip, cap removed.",
+   "lymphoria-dropper-source.jpg": "Original-footage dropper frame; superseded by the clean dropper image."
+  }
+ }
+}

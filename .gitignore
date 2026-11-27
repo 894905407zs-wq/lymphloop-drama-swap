@@ -1,0 +1,7 @@
+.venv/
+skills/lymphloop-drama-swap/bin/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+.DS_Store
