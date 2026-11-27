@@ -18,7 +18,7 @@ jobs:
   tests:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 75   # the whole suite takes about 27 minutes on the Windows runner (OCR on the CPU)
     strategy:
       fail-fast: false
       matrix:
