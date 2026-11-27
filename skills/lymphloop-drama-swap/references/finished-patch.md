@@ -26,7 +26,7 @@
 
 示例帧号只是 schema 占位，不能套到实际片子。`old_frames` 是旧**成片**原生帧率下的半开窗，必须按实际镜头锁边。新 `clip_seconds` 支持精确有理数，画面与自带声音始终同文件同时间窗。
 
-单镜审核 JSON 必须包含 `reviewer:"Claude"`、`reviewed:true`、与配方逐字段相同的 `raw_media`、`media`、`clip_seconds`，`own_same_time_audio:true`，非空 `evidence:[{path,sha256}]`（真实亲看资料），以及 `caption_audio_packet_sha256:{before:实际音频packet哈希,after:相同哈希}`。字幕仅使用现有母版字幕烧录，保声音 packet；此审核不冒称全片新审。
+单镜审核 JSON 必须包含 `reviewer:"Codex"`（脚本按这个固定值校验，和实际由谁执行无关）、`reviewed:true`、与配方逐字段相同的 `raw_media`、`media`、`clip_seconds`，`own_same_time_audio:true`，非空 `evidence:[{path,sha256}]`（真实亲看资料），以及 `caption_audio_packet_sha256:{before:实际音频packet哈希,after:相同哈希}`。字幕仅使用现有母版字幕烧录，保声音 packet；此审核不冒称全片新审。
 
 `receipt.json`（prepared）绑定完整源 SHA、旧 owner、旧时间线、原生 frozen seal、每个 old/new 半开帧窗、输出帧数与48k音频时钟、原速 unchanged interval 映射和接点。`receipt.rendered.json` 另绑定实际新 MP4/原生局部时间线/技术验证 SHA，状态为等待局部 owner。所有未改内容只取同一个旧 finished source、保持顺序及速度1；尾段仅整体平移。
 

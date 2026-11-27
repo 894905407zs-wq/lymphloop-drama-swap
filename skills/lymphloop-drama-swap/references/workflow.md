@@ -11,7 +11,7 @@ RUN/watermark/{scan.json,cleanup.json}   水印扫描与清洗报告
 RUN/master-clean.mp4        工作母版（识别、切镜头、听写和回剪里保留原片的部分用它；送 Seedance 的参考段从原始源文件裁）
 RUN/shots/shots.json  sheets/S###.png  frames/S###.jpg
 RUN/detect/{timecoded.mp4,pro_raw.md,pro_nodes.json,overrides.json}
-RUN/screen/S###.json  summary.json      Flash 逐镜头结果
+RUN/screen/S###.json  summary.json      逐镜头筛查结果（Agent 的判定经 screen --import-verdicts 展开）
 RUN/plan/{decisions.json,segments.json,selections.json}
 RUN/plan/{scenes.json,lock_overrides.json,scene_strips/,speech/}   切点分级、听写缓存
 RUN/detect/competitor.json  competitor/anchor-*.jpg   本条竞品档案与识别锚点帧（第 1b 步）
@@ -23,7 +23,7 @@ RUN/generation/{jobs/*.json,results/*.mp4}   APIMART Seedance 账本与结果（
 RUN/plan/words/G##.json [G##.generated.json]   词级时间戳（scripts/words.py）
 RUN/frames/G##.jpg  G##-out.jpg         每段原片密帧板与生成片帧板（scripts/seg_sheets.py）
 RUN/apimart/image_uploads.json          图片上传缓存（72 小时链接）
-RUN/qa/G##-a1-c1.png  G##-a1-c1.json   生成片帧板与 Flash 第二意见
+RUN/qa/G##-a1-c1.png  G##-a1-c1.json   生成片帧板；.json 是外部 Flash 的 QA 记录，默认不调外部 Gemini 时没有
 RUN/recut/{edit.json,edit.frozen.json,render/}
 RUN/final/<master sha16>/{shots/,screen/,clips/}   成片终检（按成片字节分目录，重渲染的成片一定重新筛）
 OUT/master.mp4(+.timeline.json,+.verification.json)
@@ -54,17 +54,17 @@ OUT/master.mp4(+.timeline.json,+.verification.json)
 `swap.py screen`：原生模式下输出 `RUN/agent_review/shot_grids/shot_grid_##.jpg` 与 `RUN/clips/` 路径；Agent 亲自看网格（短镜、弱露瓶镜直接看 `.mp4`）写出精简判定 JSON `{"replace_ids": [...], "unsure_ids": [...], "notes": {...}}`，再跑 `swap.py screen --run RUN --import-verdicts verdicts.json` 自动展开生成 `RUN/screen/S###.json` 与 `summary.json` 并提交阶段记录。
 
 ### 6 merge
-`swap.py merge` 产出 `plan/decisions.json`。规则：Pro 节点与镜头有重叠 → 该镜头继承其 kinds（visual/dialogue/vo）和改写；Flash verdict=replace → visual；override 可 `{"S012":{"decision":"replace","kinds":["visual"],"note":"帧板 F340 瓶子在桌角"}}` 或 `{"S020":{"decision":"keep","note":"Flash 误把水杯当瓶子，帧板确认无竞品"}}`。override 是唯一能把 replace 改成 keep 的途径。
+`swap.py merge` 产出 `plan/decisions.json`。规则：节点（`pro_nodes.json`）与镜头有重叠 → 该镜头继承其 kinds（visual/dialogue/vo）和改写；逐镜头筛查 verdict=replace → visual；override 可 `{"S012":{"decision":"replace","kinds":["visual"],"note":"帧板 F340 瓶子在桌角"}}` 或 `{"S020":{"decision":"keep","note":"筛查时误把水杯当瓶子，帧板确认无竞品"}}`。override 是唯一能把 replace 改成 keep 的途径。
 
 ### 7 plan
 `swap.py plan [--dry-run] [--no-speech] [--no-scenes]`：按**锁边**切生成段（用户 2026-10-24 定）。**本 skill 的参考段保持小于 15 秒**，上限取 14.9 秒；**上限不是目标**；生成模型只管段内质量，段的起止切错了，回剪永远对不上。规则（`scripts/scenes.py`、`scripts/speech_map.py`）：
-1. **每个硬切点分级**（`scenes.cut_levels`，结果和 Flash 的理由缓存在 `RUN/plan/scenes.json`）：每个镜头拼一张首、中、尾三帧的条图（`RUN/plan/scene_strips/`），按顺序每 24 个镜头发一次 Flash（相邻两批重叠一个镜头），问两件事：下一个镜头是不是同一个物理环境，是不是同一时刻的连续动作。不同环境 = **段落锁边**；同一环境但没有连续性 = **镜头锁边**；其余是普通硬切。切点处音轨掉到几乎无声（低于局部电平 8% 且低于全片电平 5%）作为线索一并告诉 Flash。
-2. **Claude 复核**：对照帧板看 `scenes.py RUN` 打印的分级，判错的在 `RUN/plan/lock_overrides.json` 改（`{"S019": "shot", "S020": "paragraph", "S007": "none"}`，键是切点后面那个镜头）。每个切点都写了时不调用 Flash。
-3. **块**（`speech_map.lock_blocks`）：每个段落（两个段落锁边之间）用 Flash 听写一次（缓存在 `RUN/plan/speech/`），再按镜头锁边分块。块里有产品镜头或要改的台词（`needs_edit`）就整块生成。一句话跨过镜头锁边就合并两块（不超上限时）；跨过段落锁边不合并，写进 `block_notes`。两句间停顿不到 0.35 秒算同一句没说完（听写会把 "Six weeks. You're dancing…" 拆成两句，中间只有 0.28 秒）。
-4. **块内切**：每一处 ≥0.8 秒、里面有硬切点的停顿是候选段落边界，切在下一句开口前的最后一个硬切点；这些停顿和下一条的强制切点一起发给 Flash 做一次语义判断，判为一来一回中间（问答、道歉与回应）的停顿整段不再算边界，只要合并后仍在上限内。短于 3 秒的段并入相邻段，并入后仍在上限内才并。
+1. **每个硬切点分级**（`scenes.cut_levels`，结果和理由缓存在 `RUN/plan/scenes.json`）：每个镜头拼一张首、中、尾三帧的条图（`RUN/plan/scene_strips/`），本地比较切点两侧条图的色彩直方图（HSV 相关系数），不调模型。要分清两件事：下一个镜头是不是同一个物理环境，是不是同一时刻的连续动作。不同环境 = **段落锁边**（相关 < 0.45）；同一环境但没有连续性 = **镜头锁边**（相关 0.45–0.65）；其余是普通硬切（相关 ≥ 0.65）。切点处音轨掉到几乎无声（低于局部电平 8% 且低于全片电平 5%）时升一级：相关 < 0.65 算段落锁边，≥ 0.65 算镜头锁边。直方图只是粗分，下一条的复核不能省。
+2. **Agent 复核**：对照帧板看 `scenes.py RUN` 打印的分级，判错的在 `RUN/plan/lock_overrides.json` 改（`{"S019": "shot", "S020": "paragraph", "S007": "none"}`，键是切点后面那个镜头）。每个切点都写了时直接用写的分级。
+3. **块**（`speech_map.lock_blocks`）：每个段落（两个段落锁边之间）用本地 Whisper 听写一次（缓存在 `RUN/plan/speech/`），再按镜头锁边分块。块里有产品镜头或要改的台词（`needs_edit`）就整块生成。一句话跨过镜头锁边就合并两块（不超上限时）；跨过段落锁边不合并，写进 `block_notes`。两句间停顿不到 0.35 秒算同一句没说完（听写会把 "Six weeks. You're dancing…" 拆成两句，中间只有 0.28 秒）。
+4. **块内切**：每一处 ≥0.8 秒、里面有硬切点的停顿是候选段落边界，切在下一句开口前的最后一个硬切点；这些停顿和下一条的强制切点一起过一次本地的停顿和标点判断（问句后面不切；停顿 ≥ 0.55 秒，或句子以句号、叹号结尾才切），判为一来一回中间（问答）的停顿整段不再算边界；道歉与回应这类本地判断不出的一来一回，Agent 看 `plan` 的输出时并回去，只要合并后仍在上限内。短于 3 秒的段并入相邻段，并入后仍在上限内才并。
    - 段落超过 30 秒时按约 30 秒、落在硬切点上的块分段听写（`transcribe_chunked`，每块前后多送 2 秒音频，句子归中点所在的块）：v025 的 162 秒花店段一次听写时间戳漂约 0.5 秒，把 "Four herbs" 之前的切点判成切到台词。
    - 切点处音轨 ±0.1 秒内掉到局部电平 12% 以下（`scenes.quiet_cuts`）时，听写的句首句尾离切点 0.5 秒以内算听写误差（v025 166.38 秒：听写说 "Four" 早 0.26 秒开口，音轨在切点掉到 3%，测试 2 的参考段从这里切也完整含 "Four herbs"）；切点在句子中间的安静处仍算切到台词。
-5. 仍超过上限的段，用最少的切点拆开：候选是不跨句的硬切点，先发一次 Flash 判断哪些是真正的话题转换（问答、道歉与回应这类一来一回、列举、品牌名和它后面的说明都不拆开），优先切在这些点上，其次切在停顿最长的点。实在只能切进句子时，段上带 `warning`，Claude 必须看。
+5. 仍超过上限的段，用最少的切点拆开：候选是不跨句的硬切点，先用同一套本地判断挑出可切的点（问答、道歉与回应这类一来一回、列举、品牌名和它后面的说明都不拆开，本地判断不出的由 Agent 复核时改），优先切在这些点上，其次切在停顿最长的点。实在只能切进句子时，段上带 `warning`，Agent 必须看。
 6. 切完后既没有产品镜头、也没有要改台词的段（不满足 `needs_edit`）不生成，原片照放，记在 `segments.json → skipped_product_free`。短段参考用末帧和静音补到约 4.1 秒。成片按审过的有效画声时长顺剪。
 7. **单个镜头本身就超过上限时**（少见，`speech_map.split_long_shots`）：在镜头内部的句间停顿中点切开，选切点最少、停顿最长的方案，子镜头记为 `S012.1`、`S012.2`；真实硬切点永远优先。`trim` 记录原片停顿中可考虑的切点。回看生成的同期画声后，再以实际发话边界决定是否手动剪气口。没有可用停顿时平均切开并带 `warning`。
 
@@ -83,7 +83,7 @@ OUT/master.mp4(+.timeline.json,+.verification.json)
 
 ### 9 generate
 
-**竞品留在参考片里**（用户 2026-11-19）：`--erase` 已停用。准备时 Flash 列出参考片里的每处竞品（`jobs/G##-a1.json → reference_competitor.items`），提交时核对它们所在镜头那一行都有 `将@视频1中…更换为…` 替换句。专门的参考图放 `RUN/refs/`，提示词 `# views:` 写 `run:文件名`。
+**竞品留在参考片里**（用户 2026-11-19）：`--erase` 已停用。准备后 Agent 自己看参考片找出每处竞品，核对它们所在镜头那一行都有 `将@视频1中…更换为…` 替换句（五段式提示词是【参考素材职责】写“完全移除原片中的…”、那一阶段写出我方产品）；脚本不再自动列出竞品（`reference_competitor.items` 只在打开外部 Gemini 时才有）。专门的参考图放 `RUN/refs/`，提示词 `# views:` 写 `run:文件名`。
 
 **用户要求重生成时**（用户 2026-11-19）：`generate --segment G06,G07 --prepare-only --user-approved-regen G06 --user-approved-regen G07 --user-quote "用户原话" [--mute …]` 读 `prompts/G06-a2.txt`（G07 的 a2 已被本地拼接占用时读 `G07-a3.txt`），准备出 `jobs/G06-a2.json`；看完上传帧板后只带 `--segment`、`--user-approved-regen`、`--user-quote` 提交（`--mute` 只在准备时给，提交时给会被拒）。之后 `review --segment G06` 会把 a1 和 a2 都出帧板，`select --job G06-a2 --candidate c1` 选新的那条，`captions` 读所选任务自己的提示词。
 
@@ -139,7 +139,7 @@ OUT/master.mp4(+.timeline.json,+.verification.json)
 - 复查替换段接点、完整台词与音画，核对 `master.mp4.timeline.json` 的源帧和成片帧映射，按新时间码交付问题清单。
 
 ### 11b brand
-`swap.py brand`：按复核过的 `scan.json` 把原水印每一帧的框连成轨迹（同一帧里全帧扫描和边缘补扫的框按四条边各取中值合并（不取并集，否则某一路框松了字就盖歪、盖高）、逐帧中值平滑），竖排轨迹的读向交给 Flash 看一张放大截图判断（`RUN/watermark/direction/`），然后在 recut 成片上逐帧先把每个框修补干净（OpenCV Telea，原水印和生成段里带出的淡残影都不会从字缝里露出来），再盖白色不透明 LYMPHLOOP；字幕或招牌里提到竞品的整行（OCR 行里还有别的词，如 "LYMPHORIA 4 HERBS"）只清除、不盖字（也不补淡入淡出帧）；LYMPHLOOP 填满原水印（水滴图标 + 文字）的范围、字母比例不变、方向和原水印一致，一次编码（libx264 crf 12，音轨直接拷贝），写回 `OUT/master.mp4`，未盖版保存为 `OUT/master.unbranded.mp4`，回执 `OUT/master.brand.json`（含抽检：抽 60 帧检查字是不是白的）。重跑会从未盖版重新盖，不会盖两层。原片没有漂浮水印时记为 skipped。recut 按 `master.mp4.timeline.json` 将原水印的位置移到成片对应帧，补查实际生成画面中的残留。
+`swap.py brand`：按复核过的 `scan.json` 把原水印每一帧的框连成轨迹（同一帧里全帧扫描和边缘补扫的框按四条边各取中值合并（不取并集，否则某一路框松了字就盖歪、盖高）、逐帧中值平滑），竖排轨迹的读向：有模板的位置用模板记录的方向，其余默认向下读，放大截图存到 `RUN/watermark/direction/` 给 Agent 核对（方向反了在 `scan.json` 那一处的命中上写 `orient` 再跑 `brand`），然后在 recut 成片上逐帧先把每个框修补干净（OpenCV Telea，原水印和生成段里带出的淡残影都不会从字缝里露出来），再盖白色不透明 LYMPHLOOP；字幕或招牌里提到竞品的整行（OCR 行里还有别的词，如 "LYMPHORIA 4 HERBS"）只清除、不盖字（也不补淡入淡出帧）；LYMPHLOOP 填满原水印（水滴图标 + 文字）的范围、字母比例不变、方向和原水印一致，一次编码（libx264 crf 12，音轨直接拷贝），写回 `OUT/master.mp4`，未盖版保存为 `OUT/master.unbranded.mp4`，回执 `OUT/master.brand.json`（含抽检：抽 60 帧检查字是不是白的）。重跑会从未盖版重新盖，不会盖两层。原片没有漂浮水印时记为 skipped。recut 按 `master.mp4.timeline.json` 将原水印的位置移到成片对应帧，补查实际生成画面中的残留。
 
 ### 12 final-screen & 看板服务
 `swap.py final-screen`：原生模式下跳过外部 Flash 筛查，自动把变动镜头帧板与闪回帧板拼成紧凑大图（`final/<sha>/agent_review/changed_shots_##.jpg` 与 `flashback_##.jpg`）供 Antigravity 用 `read_file` 集中审完，同时完整运行本地水印检测、`speech_gate.py` 全片口播检查与 `cutscan.py` 闪回关。
@@ -148,7 +148,7 @@ OUT/master.mp4(+.timeline.json,+.verification.json)
 - 多条片导航页：`"$PY" scripts/compare_board.py --runs RUN1 RUN2 --serve --port 8765`
 
 （旧版 `final-screen` 细节与定点修补同下：）
-`swap.py final-screen`：筛的是 `brand` 之后的成片（原片有水印却没跑 `brand` 会拒绝）。成片重新切镜头 + Flash 筛查（目录按成片 sha 分开，重新 recut 后不会复用旧镜头片段），再重查一遍竞品水印词（`watermark_target`）：默认只读 `brand_plan.json → positions` 的固定位置、整条成片都读（用户 2026-11-20；旧的全帧 + 四边补扫每轮约 10 分钟，`--full-watermark` 仍可用）；`watermark_left` 列出还残留的时间，必须为空；有残留就 `swap.py watermark add-final`（把 `final/<sha>/watermark/left.json` 的残留框及淡入淡出范围存为成片帧坐标；OCR 认不出、但自己或 Flash 看到的残留用 `--manual 起帧-止帧:X,Y,W,H` 逐帧补进去，不需要先跑终检）→ `swap.py brand` → `swap.py final-screen`，`brand` 自己会修补再盖字，所以不用重新 recut（`--no-watermark-check` 只用于原片确实没有水印的情况）。某个镜头 Flash 连续答不出 JSON 时记进 `errors` / `unsure`，其余镜头照常筛，重跑会重试它。`flagged` 非空就看对应帧板：是漏换 → 在 `overrides.json` 标 replace，核对该原片时间窗是否已提交。首次发现的漏换段走准备与检查；已经提交的时间窗做本地修补；是误报 → 记录理由。
+`swap.py final-screen`：筛的是 `brand` 之后的成片（原片有水印却没跑 `brand` 会拒绝）。成片重新切镜头，变动镜头的帧板拼成大图由 Agent 筛查（目录按成片 sha 分开，重新 recut 后不会复用旧镜头片段），再重查一遍竞品水印词（`watermark_target`）：默认只读 `brand_plan.json → positions` 的固定位置、整条成片都读（用户 2026-11-20；旧的全帧 + 四边补扫每轮约 10 分钟，`--full-watermark` 仍可用）；`watermark_left` 列出还残留的时间，必须为空；有残留就 `swap.py watermark add-final`（把 `final/<sha>/watermark/left.json` 的残留框及淡入淡出范围存为成片帧坐标；OCR 认不出、但自己看到的残留用 `--manual 起帧-止帧:X,Y,W,H` 逐帧补进去，不需要先跑终检）→ `swap.py brand` → `swap.py final-screen`，`brand` 自己会修补再盖字，所以不用重新 recut（`--no-watermark-check` 只用于原片确实没有水印的情况）。打开外部 Gemini 时，某个镜头 Flash 连续答不出 JSON 会记进 `errors` / `unsure`，其余镜头照常筛，重跑会重试它。`flagged` 非空就看对应帧板：是漏换 → 在 `overrides.json` 标 replace，核对该原片时间窗是否已提交。首次发现的漏换段走准备与检查；已经提交的时间窗做本地修补；是误报 → 记录理由。
 
 **只查新内容**（用户 2026-11-22）：每轮把成片每块的内容签名写进 `final/<sha>/content.json`，和上一次终检比，只筛新内容的镜头、只听新内容的窗口、只出新内容的闪回帧板（上一版看过闪回帧板时）；上次有未了结问题的块照样重查。回执 `scope.baseline` 记上一版 sha、没变的块数、新内容是哪些段。`--no-baseline` 查全部生成段。
 

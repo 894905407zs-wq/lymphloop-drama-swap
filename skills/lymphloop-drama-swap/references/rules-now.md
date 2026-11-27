@@ -1,6 +1,6 @@
 # 现行规则（换品设计与提示词，Antigravity 原生看听版 v2.2）
 
-> **Antigravity 原生零 Gemini 模式（2026-11-24）**：本插件默认完全不调用外部 Gemini API（`agent_native.is_native() == True`）。凡下文提到“Flash 观察 / Flash 筛查 / Flash 审片”的环节，在本插件中均由当前 Agent 直接使用 `read_file` 看视频/帧板与听音轨完成（或通过 `--import-nodes` / `--import-verdicts` / `select --audit` 落盘）；本地听写由 `faster-whisper` 经 ffmpeg 解码执行。
+> **Antigravity 原生零 Gemini 模式（2026-11-24）**：本插件默认完全不调用外部 Gemini API（`agent_native.is_native() == True`）。观察、筛查、审片都由当前 Agent 直接使用 `read_file` 看视频/帧板与听音轨完成，结论通过 `--import-nodes` / `--import-verdicts` / `observe --import-obs` / `select --audit` 落盘；下文还提到 Flash、Gemini 的地方是当时的实测记录或用户原话，不是现在的做法；本地听写由 `faster-whisper` 经 ffmpeg 解码执行。
 
 ## 对白改词优先“音节数对齐”（2026-11-24 Antigravity 看听优化）
 
@@ -27,14 +27,14 @@
 ---
 
 用户 2026-11-20："我最终是要让agent自己能够判断，不要给我审，因为我会批量跑很多视频。"所以：
-- **agent 只看事实，不做换法决定**。每个替换镜头由 Flash 回答固定的客观问题（竞品是什么、在哪、占画面多大、手在做什么、是不是镜头主体），存在 `RUN/design/obs/`。
+- **agent 只看事实，不做换法决定**。每个替换镜头由 Agent 看 `observe` 出的拼图和片段，回答固定的客观问题（竞品是什么、在哪、占画面多大、手在做什么、是不是镜头主体），存在 `RUN/design/obs/`。
 - **换成什么、动作改不改，由规则表决定**（`scripts/swap_design.py` 的 `RULES` / `decide()`），写进 `RUN/plan/swap_design.json`。判错时改规则表和它的测试（`tests/test_swap_design.py`，用户裁定当标准答案），不单独改某个镜头。
 - **提示词从设计表生成骨架**，agent 只填场景、人物、音色和原台词；`shot_regen.py prepare` 核对提示词和设计表一致（图、形态、数量、五段齐全、没有旧写法），不一致就拒绝。
 
 ## 流程
 
 ```bash
-$PY scripts/swap_design.py observe --run RUN            # 每个计划段里的镜头：Flash 看片 + 三张全分辨率截帧 + 筛查线索
+$PY scripts/swap_design.py observe --run RUN            # 每个计划段里的镜头：出截帧拼图和片段路径；Agent 看后写观察 JSON，再 observe --import-obs 导入
 $PY scripts/swap_design.py decide  --run RUN            # 规则表 -> RUN/plan/swap_design.json
 $PY scripts/swap_design.py skeleton --run RUN --shots S219,S220 --name S219g   # -> RUN/shots-regen/S219g.txt（五段式骨架）
 # 填满【写…】：场景、人物、每个说话人的音色、{原台词}、每阶段的景别和终态
@@ -87,7 +87,7 @@ $PY scripts/shot_regen.py prepare --run RUN --name S219g --user-quote "…"    #
 - 正文没有画幅、时长、分辨率、帧率，也没有秒数和时间戳（9:16、竖版、720P、8 秒、0–3 秒、fps）——这些全是接口参数；没有镜头号、规则号（S217、R9-）——分析只写在 `#` 注释。
 - 和设计表一致：图、形态、数量、没有旧写法（"这不是视频编辑"、"将@视频1中……更换为……"、"动作照@视频1 / 照它"、厘米数）。
 - 【事件脚本】里没有画面否定句；全文没有勺子、音标、厘米数。
-- 参考片里 Flash 看到的每处竞品：【参考素材职责】有"完全移除原片中的……"，且它所在镜头的那一阶段写出了我方纸盒或条包（台词里念到品牌名不算）。
+- 参考片里 Agent 看到的每处竞品：【参考素材职责】有"完全移除原片中的……"，且它所在镜头的那一阶段写出了我方纸盒或条包（台词里念到品牌名不算）。
 
 **补做只做一个镜头，声音看画面里有没有人说话**（用户 2026-11-20 定三种，用户 2026-11-21："这种带有口型同步的替换段，不论有没有改口播，都应该要用生成段自带的音频"，统一成下面两种）：
 - `prepare --goof`：参考片只能是一个镜头（一个 `--frames`，里面没有硬切），否则拒绝。不为了让一句台词连起来把两个镜头接在一起（Claude 30542865505302802 G14R1314 把特写和中近景接成一次，中近景里竞品瓶原样留着）。
@@ -97,7 +97,7 @@ $PY scripts/shot_regen.py prepare --run RUN --name S219g --user-quote "…"    #
 - `locate` 判断"有人说话"靠设计观察和台词类型，可能判错：拼回前看一眼那一镜，嘴在动就当 `lip_sync`。
 
 **穿帮镜头单独补做**（用户 2026-11-20："如果首次生成的整段中出现了穿帮，对照原片看穿帮的是那一镜，然后单独针对穿帮的镜头重写提示词生成。"）：
-1. 审片（帧条 + Flash 第二意见）发现穿帮，记下生成片里的秒数。
+1. 审片（帧条 + 直接看、听生成片）发现穿帮，记下生成片里的秒数。
 2. `shot_regen.py locate --run RUN --seg G## --at 秒数`：给出生成片里穿帮那一镜的起止（按硬切）、原片同一时间的参考帧、是否左右镜像、这一镜的台词和改词、下一步命令。单个长镜头用 `--from-s` 从穿帮前的句间停顿开始，不必重做整镜。
 3. 找穿帮原因再写提示词：参考片里有竞品的位置（侧袋、背景）写成“只露出我方产品的…”；被参考图带偏的（地毯背景）按对应例外去掉那张图并把真实背景写具体；照搬原片握法导致侧面当正面的，写清“正面朝镜头、竖着拿”。
 4. `ref`（镜像时 `--hflip`，有改词时 `--mute`）→ `prepare --user-quote "<这条规则原文>"` → 生成 → 看帧条 → `splice --into 起-止帧` → `select --clip-out 原段长`（别把段尾定格帧带进来）。
@@ -163,7 +163,7 @@ $PY scripts/shot_regen.py prepare --run RUN --name S219g --user-quote "…"    #
 - **闪回关**（`final-screen`，`final_flashback`；用户 2026-11-21 又定："我不想过度依赖外部gemini，且让gemini看帧版不如agent自己看。gemini的强项是看视频，但如果看帧版只是看图，agent自己就能看了"）：只出帧板，不调任何模型。取点：接缝（生成画面和任何东西相接处）；`splice` 配方里每个拼接点（从 `generation/jobs/<job>.json → recipe.pictures` 递归算出，同机位拼接不是硬切，只有配方知道）；所有不超过 0.5 秒的碎镜头。接缝和拼接点取前后 0.5 秒每 3 帧一帧加接点两帧（3389 的闪回各 6 帧，每 3 帧能看到两次），碎镜头逐帧加前后 2 帧；重叠的合并。一处一张帧板，每格 300 px、标成片帧号和时间，接点那帧画红框，在 `final/<sha>/flashback/sheets/`，清单在 `sheets.json`。只查改动范围（`--full` 查整条）。生成段内部的镜头交给第 10 步审片，不在这里。
 - **agent 怎么看**：每张都打开。看手里、包口、口袋、抽屉、桌面、画边有没有不是我方青绿条包/纸盒的东西；滴剂瓶在这种地方多半只露出一截米白（标签）或琥珀色（玻璃）的圆柱。可疑就用 ffmpeg 把那一处前后逐帧、原尺寸截出来看。看完 `swap.py flashback-review --run RUN --clean`；看到就 `--hit A-B --note "…"`，按穿帮补做或修拼接点，重跑 final-screen 再看一遍。
 - 实测（3389 修正前的旧成片，2026-11-21）：改动范围 25 处、28 张、301 帧，出图 4 秒；拼接点 6506 那张里 f6503、f6505 能看出右手从包口带出米白圆柱，就是原瓶。之前试过让 Flash 看帧板：三张一问三次全漏、单张一问时好时坏，还有误报，已撤掉。
-- Flash 仍用于看视频的环节（筛查、审片第二意见），不用于看帧板。
+- 看视频的环节（筛查、审片）从 2026-11-24 起也由 Agent 自己看，不调外部 Gemini。
 
 ## 说话镜头只用自己的声音（用户 2026-11-21："这种带有口型同步的替换段，不论有没有改口播，都应该要用生成段自带的音频"）
 
@@ -189,7 +189,7 @@ $PY scripts/shot_regen.py prepare --run RUN --name S219g --user-quote "…"    #
 - 问题不在顺剪，在缓存的钥匙：`recut` 每块的缓存按整张剪辑单算，改一个镜头所有块作废、整条重编（2,000–3,000 核心·秒）；`brand` 把整条片解码、crf 12 再编一遍；`final-screen` 每轮重查全部生成段、重出全部闪回帧板。
 - **回剪**：每块（一段原片或一个生成画面）单独编码，钥匙是它是什么——文件字节、取的帧或秒、输出帧率和画幅、编码代码，不含它在成片里的位置（`media_pipeline.atom_key`，文件在 `RUN/recut/render/atoms/`，保留最近 3 次回剪用到的块）。补一个镜头只重编这一块，后面的块原样拿来，按新位置无损拼接。所有块用 x264 `stitchable=1`，不同时间、不同 crf 编出来的块头信息一致，拼接安全。
 - **盖水印**：按块盖（`watermark_brand.stamp_atoms`）。块里没有水印帧就直接用回剪的块，不重编；有水印帧的块盖好单独编码（crf 12），钥匙是块的内容 + 这一块上盖的字（相对块开头的帧号、框、方向）+ 盖字代码，缓存在 `RUN/recut/brand-atoms/`。回执 `by_atom` 记这次盖了几块、复用几块、几块没动。旧 RUN 的时间轴没有块钥匙时照旧整条盖。
-- **终检**：每次把成片每块的内容签名写进 `final/<sha>/content.json`；下一轮和上一次终检的成片比，只查新内容（`final/<sha>/baseline.json`）。上次有未了结问题的块（Flash 标记 / 拿不准 / 出错的镜头、水印残留、听到竞品词、闪回 hit）即使没变也重查；上一版没跑 `flashback-review` 时闪回帧板照旧出全部生成段。没变的块是同样的画面和声音、只是换了位置，上次已经筛过、看过。`--no-baseline` 或 `--full` 关掉。整条成片的水印模板比对照旧每轮读全片（约 30 秒）。
+- **终检**：每次把成片每块的内容签名写进 `final/<sha>/content.json`；下一轮和上一次终检的成片比，只查新内容（`final/<sha>/baseline.json`）。上次有未了结问题的块（筛查标记 / 拿不准 / 出错的镜头、水印残留、听到竞品词、闪回 hit）即使没变也重查；上一版没跑 `flashback-review` 时闪回帧板照旧出全部生成段。没变的块是同样的画面和声音、只是换了位置，上次已经筛过、看过。`--no-baseline` 或 `--full` 关掉。整条成片的水印模板比对照旧每轮读全片（约 30 秒）。
 - 对比看板和已知问题里的新时间码都从 `master.mp4.timeline.json` 换算；顺剪后时间码变了是正常的，先换算再写。
 - 第一次用新代码回剪的 RUN 会把所有块重编一次（钥匙变了），之后才省。
 
@@ -294,7 +294,7 @@ $PY scripts/shot_regen.py prepare --run RUN --name S219g --user-quote "…"    #
 ## 1753 实跑后的规则修订（2026-11-21，Claude 跑 3D 动画西语 Lymphoria 滴剂片）
 
 代码里已生效，这里写给读文档的 agent：
-- **R0 只在真看到竞品时触发**：Flash 筛查 `competitor_visible=yes`，或 Claude 在 overrides 里把镜头标成 visual。只因台词被标记的镜头、Pro 时间码套到的脸部镜头，一律不加产品（1753：11 个无产品镜头差点被塞条包）。
+- **R0 只在真看到竞品时触发**：Agent 在 `detect/overrides.json` 里把镜头标成 visual（Agent 导入的筛查结果里没有 `competitor_visible` 这一栏，筛查判 replace 本身不触发 R0；打开外部 Gemini 时 Flash 答 `competitor_visible=yes` 也触发）。只因台词被标记的镜头、节点时间码套到的脸部镜头，一律不加产品（1753：11 个无产品镜头差点被塞条包）。
 - **画面要改、但没有实体竞品的镜头，在 override 里写 `"physical_competitor": false`**（2026-11-22，批次片 1912538379721657 S045：血管动画配的是我方没有的成分，override 标了 `visual` 要改成分画面，R0 就按“人手边的小件”给它写了“人物手捏已开封条包”，可画面里没有人）。成分动画、成分植物、标题字这类镜头：`{"S045": {"decision": "replace", "kinds": ["visual", "vo"], "physical_competitor": false, …}}`，重跑 `swap_design.py decide`，这一镜判成“无竞品”，不加产品；成分画面改成什么由 agent 在这一阶段的提示词里正向写（我方成分的样子）。这是 override 的正常用法，不算绕过规则表。
 - **R2 抽滴管**：有手的镜头，原来拿瓶的手一直捏着未开封条包；没手、瓶子立在台面上的，原位立 1 个纸盒；只有一根滴管、没瓶没手时才用平放条包（用户 11-19 S161）。原来的“静态平放条包”在 1753 的 4 个镜头里全被画成自己立着。
 - **R5b 包里拿出纸盒**：从包里拿出、下一镜（同段）是纸盒的同一件东西，这一镜也拿纸盒；手提包装得下，口袋装不下。
@@ -304,7 +304,7 @@ $PY scripts/shot_regen.py prepare --run RUN --name S219g --user-quote "…"    #
 - **补字幕复制原片字幕**：只复制字幕本身颜色（白字、高亮色）和描边；产品印刷字的 OCR 误读（“drair”=drainage）不当标题卡。1753 G02 曾把瓶标贴回画面半秒。
 - **生成画面上的本地抹除**：默认仍然禁止；用户在对话里明确同意时，`region_inpaint.py --user-approved "用户原话"`，原话记进修补记录。
 
-- **水印候选先分清是不是产品标签**（用户 2026-11-21："扫描水印的时候一直把产品标签当成水印"）：`watermark scan` 找出固定位置后，Flash 逐个位置看放大截图，判断是飘在画面上的半透明水印、产品上的印刷字（瓶标、纸盒、手机商品页），还是字幕或招牌。判成产品印刷字和字幕的位置不再算水印，这些读数改标 `printed_label_keep`，不清除、不盖 LYMPHLOOP；拿不准的保留。结果写在 `scan.json → place_check`，`--no-place-check` 可跳过。实测：1753 的 18 个候选全是瓶标，全部判对；1506 的 6 个真水印全部保留。
+- **水印候选先分清是不是产品标签**（用户 2026-11-21："扫描水印的时候一直把产品标签当成水印"）：`watermark scan` 找出固定位置后，把每个位置的放大截图存到 `RUN/watermark/place_kind/`，Agent 逐个看，判断是飘在画面上的半透明水印、产品上的印刷字（瓶标、纸盒、手机商品页），还是字幕或招牌。脚本先把每处都记为拿不准并保留；Agent 把确认是漂浮水印的位置写进 `RUN/watermark/agent_positions.json`（`reviewed`、`all_candidates_classified`、`source_sha256`、`width`、`height`、`positions[].box`、`note`），不在其中的读数改标 `printed_label_keep`，不清除、不盖 LYMPHLOOP。结果写在 `scan.json → place_check`，`--no-place-check` 可跳过。实测：1753 的 18 个候选全是瓶标，全部判对；1506 的 6 个真水印全部保留。
 
 ## 水印模板（用户 2026-11-21："扫水印这件事太慢了……都非常占 CPU"，选"固定位置+有水印才盖"）
 
@@ -367,7 +367,7 @@ $PY scripts/shot_regen.py prepare --run RUN --name S219g --user-quote "…"    #
 - **报了母版问题，不要整批停下等**。线程 3 报了问题后整条停住，只交了 3/9 条，是用户先发现的。正确做法：问题写进本批的维护者记录（复现命令 + 报错原文，用 `skill-run` 原命令），被卡住的那一段或那一步先放着，其余段、其余片子照常推进到交付。母版修好后直接用新脚本续跑原命令，不用再等确认。
 - **补满三次的不问、不停**：照常 `finish` 交付，记进已知问题。全批交付时出一张汇总清单，每处写：片子、段、成片时间码、穿帮、已补次数、建议改法、估价、共用片里同一处的时间码。用户一次性裁定后再动（见上一节）。
 - **自动检查中途断了，用原命令续跑**（117 终检遇到 `Google transport interrupted (URLError)`）：缓存会接着用，不改观察结果。自动检查失败时，不能拿自己看帧板的结论顶替它，必须重跑到 `errors=[]`。
-- **Gemini 返回 429 先看 quotaId**：`FileStorageBytesPerProject` 是 Files 库满了（20 GiB 上限，本批一度积到 18,694 个文件、21.5 GB），不是限流，等多久都没用。`google_api.py prune-files --hours 3` 删除 3 小时前上传的临时副本（本批删了 17,779 个，腾出 21 GB）。删除远端文件要用户同意；`LYMPHLOOP_GEMINI_AUTO_PRUNE=1` 是满了自动清，默认关闭。≤8 MB 的媒体直接内联发送，不进 Files 库。
+- **Gemini 返回 429 先看 quotaId**（只在打开外部 Gemini 时会遇到）：`FileStorageBytesPerProject` 是 Files 库满了（20 GiB 上限，本批一度积到 18,694 个文件、21.5 GB），不是限流，等多久都没用。`google_api.py prune-files --hours 3` 删除 3 小时前上传的临时副本（本批删了 17,779 个，腾出 21 GB）。删除远端文件要用户同意；`LYMPHLOOP_GEMINI_AUTO_PRUNE=1` 是满了自动清，默认关闭。≤8 MB 的媒体直接内联发送，不进 Files 库。
 - **参数单位看 `--help`**：`flashback-review --hit` 填成片帧号（`4142-4182`），不是秒数；传秒数会报 `invalid literal for int()`。
 - **用户看片发现、自动检查没抓到的**：段尾定格，现由 `select` 自动裁掉，已交付的片子用 `retrim` 处理。交付前仍要在每个生成段的段尾和补做镜头的尾巴上抽查一次（`media_pipeline.frozen_tail`，会抓缓慢漂移的静止）。retrim 之后剩下的 0.3–0.9 秒静止只要在原段长度以内（原片本来就不动的成分特写、静态展示）就不用再裁，再裁成片就比原片短了。
 - **共用片跟着代表片走**：代表片的选片只要变了（retrim、补做、本地修），就对它的共用片重跑 `reuse` + `finish`，交付时核对共用片的 master 时间晚于代表片。本批 1771/2875 跟 2114、1085 跟 1144、998 的 4 条共用片都是这样同步的。
