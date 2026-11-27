@@ -44,9 +44,14 @@ jobs:
         if: runner.os == 'macOS'
         run: python -m pip install "rapidocr==3.10.0"
       - name: ffmpeg
+        # the skill burns timecodes with the drawtext filter; Homebrew's plain ffmpeg is built without it
         run: |
-          if [ "$RUNNER_OS" = "Windows" ]; then choco install ffmpeg -y --no-progress; else brew install ffmpeg; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then choco install ffmpeg -y --no-progress
+          else brew install ffmpeg-full && echo "$(brew --prefix ffmpeg-full)/bin" >> "$GITHUB_PATH"; fi
+      - name: ffmpeg has drawtext
+        run: |
           ffmpeg -version | head -1
+          ffmpeg -hide_banner -filters | grep -E " drawtext "
       - name: This machine
         run: python scripts/oscompat.py
       - name: Tests
