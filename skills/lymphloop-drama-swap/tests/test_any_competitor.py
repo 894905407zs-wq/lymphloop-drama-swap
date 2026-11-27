@@ -272,13 +272,24 @@ class OfficialPromptRules(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             run = Path(td); (run/'watermark').mkdir()
             master = run/'master.mp4'; master.write_bytes(b'x')
-            swap.save(run/'watermark/scan.json', {'source': {'path': str(master)}, 'detections': [
+            swap.save(run/'watermark/scan.json', {'source': {'path': str(master)}, 'overlay_classification_reviewed': True, 'detections': [
                 {'frame': 100, 'classification': 'floating_overlay', 'bbox': [10, 20, 30, 8]},
                 {'frame': 100, 'classification': 'printed_label_keep', 'bbox': [0, 0, 5, 5]},
                 {'frame': 300, 'classification': 'floating_overlay', 'bbox': [1, 1, 1, 1]}]})
             with mock.patch.object(swap.media, 'probe', return_value={'video': {'width': 360, 'height': 640}}):
                 got = swap.watermark_boxes(run, {'in_frame': 90, 'out_frame': 150}, 30, 24, (720, 1280))
             self.assertEqual(got, {8: [[20, 40, 60, 16]]})          # (100-90)/30 s -> frame 8 at 24 fps, boxes scaled x2
+
+    def test_an_unreviewed_master_scan_gives_no_boxes(self):
+        # candidates of the fuzzy match are not proof: until the classification is reviewed nothing of it reaches LaMa
+        with tempfile.TemporaryDirectory() as td:
+            run = Path(td); (run/'watermark').mkdir()
+            master = run/'master.mp4'; master.write_bytes(b'x')
+            for flag in ({}, {'overlay_classification_reviewed': False}):
+                swap.save(run/'watermark/scan.json', {'source': {'path': str(master)}, **flag, 'detections': [
+                    {'frame': 100, 'classification': 'floating_overlay', 'bbox': [10, 20, 30, 8]}]})
+                with mock.patch.object(swap.media, 'probe', return_value={'video': {'width': 360, 'height': 640}}):
+                    self.assertEqual(swap.watermark_boxes(run, {'in_frame': 90, 'out_frame': 150}, 30, 24, (720, 1280)), {})
 
 
 class ReferenceWatermarkBoxes(unittest.TestCase):
@@ -291,7 +302,7 @@ class ReferenceWatermarkBoxes(unittest.TestCase):
                     {'frame': 101, 'classification': 'floating_overlay', 'bbox': [137, 259, 95, 19], 'synthetic': 'fade_pad'},  # its hold: dropped
                     {'frame': 102, 'classification': 'floating_overlay', 'bbox': [335, 10, 14, 68], 'synthetic': 'fade_pad'},   # vertical edge mark's hold: kept
                     {'frame': 103, 'classification': 'floating_overlay', 'bbox': [10, 10, 200, 60], 'synthetic': 'gap_fill'}]   # thick line at the top: not a watermark
-            swap.save(run/'watermark/scan.json', {'source': {'path': str(src)}, 'detections': dets})
+            swap.save(run/'watermark/scan.json', {'source': {'path': str(src)}, 'overlay_classification_reviewed': True, 'detections': dets})
             with mock.patch.object(swap.media, 'probe', return_value={'video': {'width': 360, 'height': 640}}):
                 got = swap.watermark_boxes(run, {'in_frame': 100, 'out_frame': 110}, 24, 24, (720, 1280))
             self.assertEqual(sorted(got), [0, 2])
@@ -389,7 +400,8 @@ class LamaCaptionMask(unittest.TestCase):
             src = Path(td)/'in.mp4'; out = Path(td)/'out.mp4'
             media.ff(['-y', '-f', 'lavfi', '-i', 'color=c=gray:s=180x320:r=24:d=0.5', '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono',
                       '-shortest', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', str(src)])
-            ocr = fake_scanner(td, {'width': 180, 'height': 320, 'frame_count': 12, 'detections': []})   # stands in for the OCR program: no text found
+            # stands in for the OCR program: no text found. A scan names the file it read, and clean() refuses any other
+            ocr = fake_scanner(td, {'source': str(src.resolve()), 'width': 180, 'height': 320, 'frame_count': 12, 'detections': []})
             seen = []
             def fake(frames, masks):
                 seen.append(int((masks[0] > 0).sum())); return [np.full_like(frames[0], 200)]
@@ -397,6 +409,15 @@ class LamaCaptionMask(unittest.TestCase):
                 report = cl.clean(src, out, extra={3: [[10, 10, 40, 10]], 4: [[10, 10, 40, 10]]})
             self.assertEqual((report['frames'], report['frames_cleaned'], report['watermark_frames']), (12, 2, 2))
             self.assertEqual(len(seen), 2); self.assertTrue(all(n > 0 for n in seen)); self.assertTrue(out.is_file())
+
+    def test_a_text_scan_of_another_file_is_refused(self):
+        import caption_lama as cl
+        with tempfile.TemporaryDirectory() as td:
+            src = Path(td)/'in.mp4'; src.write_bytes(b'x'); out = Path(td)/'out.mp4'
+            ocr = fake_scanner(td, {'source': str((Path(td)/'other.mp4').resolve()), 'width': 180, 'height': 320, 'frame_count': 12, 'detections': []})
+            with mock.patch.object(cl.cc, 'scanner', return_value=ocr), self.assertRaisesRegex(RuntimeError, 'does not describe the actual reference'):
+                cl.clean(src, out)
+            self.assertFalse(out.exists())
 
 
 if __name__ == '__main__':

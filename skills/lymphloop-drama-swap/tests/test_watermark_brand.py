@@ -3,7 +3,7 @@
 User rule (2026-10-25): the original watermark (droplet icon + LYMPHORIA) is cleaned and the same place gets LYMPHLOOP in
 opaque white, same position, size and orientation, icon included. The batch shipped seven films with watermark frames the
 exact-match scan missed (faint marks OCR as LYMPHORTA / LYMRHORIA / MPHORIA, or only after the edge is rotated and enlarged)."""
-import json, subprocess, sys, tempfile, unittest
+import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 from unittest import mock
 
@@ -123,15 +123,32 @@ class Plan(unittest.TestCase):
         self.assertEqual(p['stamps']['5'][0]['box'][1], 98)                             # median of both passes (not their union), smoothed
 
     def test_flash_decides_the_reading_direction_of_vertical_tracks(self):
+        # only when external Gemini is allowed; the plugin's default is the next test
         dets = [{'frame': f, 'bbox': [20, 100, 12, 70], 'text': 'LYMPHORIA'} for f in range(5)]
         p = wb.plan(self.scan(dets), 360, 640)
         with tempfile.TemporaryDirectory() as td:
             src = Path(td)/'s.mp4'; make_video(src, 6)
             import flash_screen
-            with mock.patch.object(flash_screen, 'call_flash', return_value={'result': {'icon_end': 'bottom', 'reads': 'bottom_to_top', 'text': 'LYMPHORIA'}}):
+            with mock.patch.dict(os.environ, {'LYMPHLOOP_ALLOW_EXTERNAL_GEMINI': '1'}), \
+                 mock.patch.object(flash_screen, 'call_flash', return_value={'result': {'icon_end': 'bottom', 'reads': 'bottom_to_top', 'text': 'LYMPHORIA'}}):
                 p = wb.orient_tracks(p, src, td)
         self.assertEqual({st['orient'] for sts in p['stamps'].values() for st in sts}, {'v_up'})
         self.assertEqual(p['track_list'][0]['orient_source'], 'flash')
+
+    def test_without_external_gemini_a_vertical_track_reads_downwards_and_its_crop_is_kept_for_the_agent(self):
+        dets = [{'frame': f, 'bbox': [20, 100, 12, 70], 'text': 'LYMPHORIA'} for f in range(5)]
+        p = wb.plan(self.scan(dets), 360, 640)
+        native = {k: v for k, v in os.environ.items() if k not in ('LYMPHLOOP_ALLOW_EXTERNAL_GEMINI', 'LYMPHLOOP_NO_EXTERNAL_GEMINI')}
+        with tempfile.TemporaryDirectory() as td:
+            src = Path(td)/'s.mp4'; make_video(src, 6)
+            import flash_screen
+            with mock.patch.dict(os.environ, native, clear=True), mock.patch.object(flash_screen, 'call_flash') as flash:
+                p = wb.orient_tracks(p, src, td)
+            track = p['track_list'][0]
+            self.assertTrue(Path(track['agent_crop']).is_file())
+        flash.assert_not_called()
+        self.assertEqual({st['orient'] for sts in p['stamps'].values() for st in sts}, {'v_down'})
+        self.assertEqual(track['orient_source'], 'agent_native_default')
 
 
 class Stamp(unittest.TestCase):

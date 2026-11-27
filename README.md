@@ -90,7 +90,7 @@ Windows 上文字识别在 CPU 上跑，比 Mac 慢：逐帧扫描一段参考�
 
 [![tests](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions/workflows/tests.yml/badge.svg)](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions/workflows/tests.yml)
 
-每次更新，仓库的 [Actions](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions) 都会在真实的 macOS 和 Windows 机器上各跑一遍技能自带的 540 多项测试（不调用任何付费接口）。`tests/known_failures.txt` 里列的 4 项在加入 Windows 支持之前就不通过，单独记着，不算新问题。
+每次更新，仓库的 [Actions](https://github.com/894905407zs-wq/lymphloop-drama-swap/actions) 都会在真实的 macOS 和 Windows 机器上各跑一遍技能自带的 540 多项测试（不调用任何付费接口）。Windows 的测试机只有 4 核，一轮要 30 到 70 分钟。
 
 ## 注意
 

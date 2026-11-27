@@ -1,6 +1,7 @@
-# Tests that already failed before the Windows port (2026-11-26, macOS, 521 tests: 3 failures, 1 error).
-# They are kept visible here instead of being skipped; tests/run_ci.py fails only on a failure that is not listed.
-test_any_competitor.LamaCaptionMask.test_extra_boxes_reach_the_model_and_untouched_frames_pass_through
-test_any_competitor.OfficialPromptRules.test_watermark_boxes_follow_the_reference_clip
-test_any_competitor.ReferenceWatermarkBoxes.test_held_copies_of_label_and_caption_boxes_are_dropped
-test_watermark_brand.Plan.test_flash_decides_the_reading_direction_of_vertical_tracks
+# Tests that are known to fail, one id per line; an id may be followed by the systems it applies to
+# (e.g. "test_x.Class.test_y  windows"). tests/run_ci.py fails only on a failure that is not listed here.
+#
+# Empty since 2026-11-27. The four entries it held (3 failures and 1 error on macOS before the Windows port) were
+# tests written for older rules: a text scan now has to name the clip it read, the master watermark scan counts only
+# after its classification was reviewed, and the reading direction of a vertical mark is the agent's own look unless
+# external Gemini is allowed. The tests were brought up to those rules.
