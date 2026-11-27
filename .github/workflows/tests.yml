@@ -54,5 +54,11 @@ jobs:
           ffmpeg -hide_banner -filters | grep -E " drawtext "
       - name: This machine
         run: python scripts/oscompat.py
+      - name: Tests under investigation (tests/ci_focus.txt, when present)
+        if: hashFiles('skills/lymphloop-drama-swap/tests/ci_focus.txt') != ''
+        continue-on-error: true
+        env:
+          LYMPHLOOP_CI_STALL: "150"
+        run: python tests/run_ci.py $(grep -v '^#' tests/ci_focus.txt | tr '\n' ' ')
       - name: Tests
         run: python tests/run_ci.py

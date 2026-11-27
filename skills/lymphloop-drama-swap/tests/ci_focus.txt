@@ -1,0 +1,10 @@
+# Tests to run first on the CI machines while a failure is being investigated (ids or parts of ids). Delete when done.
+test_flash_screen.ScreenTests
+test_frozen_tail.RecutCutsStillFrames.test_finish_runs_retrim_before_captions
+test_parallel_robustness.FlashNoJson
+test_parallel_robustness.ScreenClipCache
+test_parallel_robustness.UploadCache
+test_probe_cache
+test_reuse.Films
+test_shot_regen.FinishChain
+test_swap_design.CartonSegmentRouting
