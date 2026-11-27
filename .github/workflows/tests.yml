@@ -18,7 +18,9 @@ jobs:
   tests:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 75   # the whole suite takes about 27 minutes on the Windows runner (OCR on the CPU)
+    # The Windows runner has 4 cores and reads text on the CPU: the suite took 29 minutes on one run and 70 on the
+    # next (2026-11-27), nearly all of it in four tests that scan a whole reference clip for watermarks.
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
